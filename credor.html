@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="DebitHub — Extrato de débitos do credor.">
+  <title>Extrato — DebitHub</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>">
+</head>
+<body>
+
+<div id="toast-container"></div>
+
+<div class="credor-page">
+
+  <!-- Header -->
+  <header class="credor-header">
+    <a href="index.html" class="header-brand" style="text-decoration:none;">
+      <div class="header-logo">💳</div>
+      <div class="header-brand-name">Debit<span>Hub</span></div>
+    </a>
+
+    <div style="display:flex;align-items:center;gap:.6rem;">
+      <select class="toolbar-select" data-lang-select>
+        <option value="pt">🇧🇷 PT</option>
+        <option value="en">🇺🇸 EN</option>
+      </select>
+      <select class="toolbar-select" data-currency-select>
+        <option value="BRL" data-i18n="opt_currency_brl">R$ Real</option>
+        <option value="EUR" data-i18n="opt_currency_eur">€ Euro</option>
+        <option value="USD" data-i18n="opt_currency_usd">$ Dólar</option>
+        <option value="GBP" data-i18n="opt_currency_gbp">£ Libra</option>
+      </select>
+      <button class="toggle-theme-btn" onclick="DH.ui.toggleTheme()">☀️</button>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <div class="credor-hero">
+    <div class="credor-hero-avatar" id="hero-avatar">?</div>
+    <div class="credor-hero-name" id="hero-name">Carregando...</div>
+    <div class="credor-hero-sub"  id="hero-sub"></div>
+    <div class="text-muted text-small" style="margin-top:.5rem;" data-i18n="pub_subtitle">
+      Veja o que está sendo devido a você
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="credor-main" id="credor-content">
+    <div style="display:flex;align-items:center;justify-content:center;padding:3rem;">
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <span data-i18n="developed_by">Desenvolvido por</span>
+    <a href="https://onpublimarketing.com.br" target="_blank" rel="noopener">Onpubli Marketing</a>
+  </footer>
+
+</div>
+
+<script src="js/i18n.js"></script>
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/credor-view.js"></script>
+
+<script>
+(function() {
+  // Load settings
+  const s = DH.data.settings.get();
+  DH.state.theme    = s.theme;
+  DH.state.language = s.language;
+  DH.state.currency = s.currency;
+
+  DH.ui.initTheme();
+  DH.i18n.init();
+  DH.i18n.applyTranslations();
+  DH.ui.initLanguageSelectors();
+  DH.ui.initCurrencySelectors();
+
+  document.querySelectorAll('.toggle-theme-btn').forEach(btn => {
+    btn.textContent = s.theme === 'dark' ? '☀️' : '🌙';
+  });
+  document.querySelectorAll('[data-lang-select]').forEach(el => el.value = s.language);
+  document.querySelectorAll('[data-currency-select]').forEach(el => el.value = s.currency);
+
+  // Update hero avatar with initials after credor loads
+  const origInit = DH.credorView.init;
+
+  // Init the public view
+  DH.credorView.init();
+
+  // Update avatar initials (after credor name is set)
+  const heroName = document.getElementById('hero-name');
+  const heroAvatar = document.getElementById('hero-avatar');
+  if (heroAvatar && heroName) {
+    heroAvatar.textContent = DH.ui.getInitials(heroName.textContent || '?');
+    // Watch for changes
+    const obs = new MutationObserver(() => {
+      heroAvatar.textContent = DH.ui.getInitials(heroName.textContent || '?');
+    });
+    obs.observe(heroName, { childList: true, characterData: true, subtree: true });
+  }
+
+  // Language switcher re-renders
+  document.querySelectorAll('[data-lang-select]').forEach(sel => {
+    sel.addEventListener('change', () => {
+      DH.credorView.init();
+    });
+  });
+
+  document.querySelectorAll('[data-currency-select]').forEach(sel => {
+    sel.addEventListener('change', () => {
+      DH.credorView.init();
+    });
+  });
+
+  // Handle hash changes (e.g., if navigating between creditors)
+  window.addEventListener('hashchange', () => {
+    DH.credorView.init();
+    if (heroName && heroAvatar) {
+      heroAvatar.textContent = DH.ui.getInitials(heroName.textContent || '?');
+    }
+  });
+})();
+</script>
+</body>
+</html>
