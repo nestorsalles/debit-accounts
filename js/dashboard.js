@@ -13,12 +13,17 @@ DH.dashboard = (() => {
   let customTo       = null;
   let selectedCreditorId = null;
 
-  const t  = () => DH.i18n.t.bind(DH.i18n);
-  const ui = () => DH.ui;
-  const data = () => DH.data;
-
   function T(k) { return DH.i18n.t(k); }
-  function C(v) { return DH.currency.format(v); }
+  function C(v, cur) { return DH.currency.format(v, cur); }
+
+  const CATEGORY_KEYS = {
+    food: 'category_food', transport: 'category_transport', health: 'category_health',
+    housing: 'category_housing', leisure: 'category_leisure', education: 'category_education',
+  };
+  function categoryChip(cat) {
+    if (!cat || !CATEGORY_KEYS[cat]) return '';
+    return `<span class="chip"><span data-icon="tag"></span>${T(CATEGORY_KEYS[cat])}</span>`;
+  }
 
   /* ════════════════════════════════
      VIEW ROUTING
@@ -56,6 +61,7 @@ DH.dashboard = (() => {
 
     const render = views[currentView] || renderOverview;
     render();
+    DH.icons.mount();
   }
 
   /* ════════════════════════════════
@@ -113,25 +119,25 @@ DH.dashboard = (() => {
         <!-- Stats -->
         <div class="stats-grid" style="margin-bottom:2rem;">
           <div class="stat-card" style="--accent-color: var(--danger)">
-            <div class="stat-icon">💰</div>
+            <div class="stat-icon" data-icon="wallet"></div>
             <div class="stat-label">${T('stat_total_debt')}</div>
-            <div class="stat-value" style="color:var(--danger)">${C(s.activeDebt)}</div>
+            <div class="stat-value" style="color:var(--danger)">${C(s.activeDebt, s.currency)}</div>
             <div class="stat-sub">${s.debitCount} ${T('label_active_debits')}</div>
           </div>
           <div class="stat-card" style="--accent-color: var(--success)">
-            <div class="stat-icon">✅</div>
+            <div class="stat-icon" data-icon="check-circle"></div>
             <div class="stat-label">${T('stat_total_paid')}</div>
-            <div class="stat-value" style="color:var(--success)">${C(s.totalPaid)}</div>
+            <div class="stat-value" style="color:var(--success)">${C(s.totalPaid, s.currency)}</div>
             <div class="stat-sub">${s.paymentCount} ${T('label_payments')}</div>
           </div>
           <div class="stat-card" style="--accent-color: var(--warning)">
-            <div class="stat-icon">📅</div>
+            <div class="stat-icon" data-icon="calendar"></div>
             <div class="stat-label">${T('stat_this_month')}</div>
-            <div class="stat-value" style="color:var(--warning)">${C(s.thisMonth)}</div>
+            <div class="stat-value" style="color:var(--warning)">${C(s.thisMonth, s.currency)}</div>
             <div class="stat-sub">${new Date().toLocaleDateString(DH.state.language === 'pt' ? 'pt-BR' : 'en-US', {month:'long', year:'numeric'})}</div>
           </div>
           <div class="stat-card" style="--accent-color: var(--accent)">
-            <div class="stat-icon">👥</div>
+            <div class="stat-icon" data-icon="users"></div>
             <div class="stat-label">${T('stat_credores')}</div>
             <div class="stat-value">${credores.length}</div>
             <div class="stat-sub">${T('all_credores')}</div>
@@ -141,13 +147,13 @@ DH.dashboard = (() => {
         <!-- Credores summary -->
         <div class="section">
           <div class="section-header">
-            <h2 class="section-title">👥 ${T('credores_title')}</h2>
+            <h2 class="section-title"><span data-icon="users"></span> ${T('credores_title')}</h2>
             <button class="btn btn-ghost btn-sm" onclick="DH.dashboard.showView('credores')">
-              ${T('credor_view')} →
+              ${T('credor_view')} <span data-icon="arrow-right"></span>
             </button>
           </div>
           ${credores.length === 0
-            ? DH.ui.emptyState('🤝', 'credor_empty', 'credor_empty_sub')
+            ? DH.ui.emptyState('users', 'credor_empty', 'credor_empty_sub')
             : `<div class="credores-grid">${credores.map(c => renderCredorCard(c)).join('')}</div>`
           }
         </div>
@@ -158,9 +164,10 @@ DH.dashboard = (() => {
   function setFilter(f) {
     currentFilter = f;
     renderOverview();
+    DH.icons.mount();
   }
-  function setCustomFrom(v) { customFrom = v; renderOverview(); }
-  function setCustomTo(v)   { customTo   = v; renderOverview(); }
+  function setCustomFrom(v) { customFrom = v; renderOverview(); DH.icons.mount(); }
+  function setCustomTo(v)   { customTo   = v; renderOverview(); DH.icons.mount(); }
 
   /* ════════════════════════════════
      CREDORES VIEW
@@ -174,7 +181,7 @@ DH.dashboard = (() => {
       <div class="animate-in">
         <div class="page-header flex justify-between items-center flex-wrap gap-3">
           <div>
-            <h1 class="page-title">👥 ${T('credores_title')}</h1>
+            <h1 class="page-title"><span data-icon="users"></span> ${T('credores_title')}</h1>
             <p class="page-subtitle">${T('credores_subtitle')}</p>
           </div>
           <div class="page-actions">
@@ -185,7 +192,7 @@ DH.dashboard = (() => {
         </div>
 
         ${credores.length === 0
-          ? DH.ui.emptyState('🤝', 'credor_empty', 'credor_empty_sub')
+          ? DH.ui.emptyState('users', 'credor_empty', 'credor_empty_sub')
           : `<div class="credores-grid">${credores.map(c => renderCredorCard(c)).join('')}</div>`
         }
       </div>
@@ -196,8 +203,6 @@ DH.dashboard = (() => {
     const s = DH.data.analytics.creditorSummary(credor.id);
     const pct = s.totalDebt > 0 ? Math.min(100, (s.totalPaid / s.totalDebt) * 100) : 0;
     const barClass = pct >= 100 ? 'success' : pct > 50 ? 'warning' : '';
-    const slug = credor.slug;
-    const link = `${window.location.origin}${window.location.pathname.replace('dashboard.html', '')}credor.html#${slug}`;
 
     return `
       <div class="credor-card" onclick="DH.dashboard.openCredorDetail('${credor.id}')">
@@ -205,13 +210,13 @@ DH.dashboard = (() => {
           <div class="credor-avatar">${DH.ui.getInitials(credor.name)}</div>
           <div class="credor-info">
             <div class="credor-name">${credor.name}</div>
-            <div class="credor-meta">📍 ${credor.city}/${credor.state} ${credor.phone ? '· 📞 ' + credor.phone : ''}</div>
+            <div class="credor-meta"><span data-icon="map-pin"></span> ${credor.city}/${credor.state} ${credor.phone ? '· <span data-icon=\"phone\"></span> ' + credor.phone : ''}</div>
           </div>
           <div class="credor-actions" onclick="event.stopPropagation()">
             <button class="btn-icon" title="${T('credor_edit')}"
-              onclick="DH.credores.openEditModal('${credor.id}')">✏️</button>
+              onclick="DH.credores.openEditModal('${credor.id}')" data-icon="edit-2"></button>
             <button class="btn-icon" title="${T('credor_delete')}"
-              onclick="DH.credores.deleteCredor('${credor.id}')">🗑️</button>
+              onclick="DH.credores.deleteCredor('${credor.id}')" data-icon="trash-2"></button>
           </div>
         </div>
 
@@ -219,32 +224,34 @@ DH.dashboard = (() => {
           <div class="credor-amount-row">
             <div class="credor-total">
               <div class="credor-total-label">${T('credor_balance')}</div>
-              <div class="credor-total-value">${C(s.balance)}</div>
+              <div class="credor-total-value">${C(s.balance, s.currency)}</div>
             </div>
             <div class="credor-paid">
               <div class="credor-paid-label">${T('credor_paid')}</div>
-              <div class="credor-paid-value">${C(s.totalPaid)}</div>
+              <div class="credor-paid-value">${C(s.totalPaid, s.currency)}</div>
             </div>
           </div>
           <div class="progress">
             <div class="progress-bar ${barClass}" style="width:${pct.toFixed(1)}%"></div>
           </div>
           <div class="flex justify-between mt-1">
-            <span class="text-xs text-muted">${T('credor_total')}: ${C(s.totalDebt)}</span>
+            <span class="text-xs text-muted">${T('credor_total')}: ${C(s.totalDebt, s.currency)}</span>
             <span class="text-xs text-muted">${pct.toFixed(0)}% ${T('label_percent_paid')}</span>
           </div>
         </div>
 
         <div onclick="event.stopPropagation()">
-          <div class="credor-link" onclick="DH.dashboard.copyLink('${link}')">
-            🔗 ${credor.slug} <span style="font-size:0.7rem;opacity:.7">· ${T('credor_copy_link')}</span>
+          <div class="credor-link" onclick="DH.dashboard.copyLink('${credor.id}')">
+            <span data-icon="link"></span> <span style="font-size:0.7rem;opacity:.7">${T('credor_copy_link')}</span>
           </div>
         </div>
       </div>
     `;
   }
 
-  function copyLink(link) {
+  function copyLink(creditorId) {
+    const link = DH.data.credores.buildShareLink(creditorId);
+    if (!link) return;
     navigator.clipboard.writeText(link).then(() => {
       DH.ui.showToast(T('toast_copied'), 'success');
     }).catch(() => {
@@ -268,14 +275,13 @@ DH.dashboard = (() => {
     const debits   = DH.data.debitos.getByCreditor(creditorId);
     const payments = DH.data.pagamentos.getByCreditor(creditorId);
     const pct = s.totalDebt > 0 ? Math.min(100, (s.totalPaid / s.totalDebt) * 100) : 0;
-    const link = `${window.location.origin}${window.location.pathname.replace('dashboard.html', '')}credor.html#${credor.slug}`;
 
     panel.innerHTML = `
       <div class="detail-panel-header">
-        <button class="detail-panel-back" onclick="DH.dashboard.closeDetail()">←</button>
+        <button class="detail-panel-back" onclick="DH.dashboard.closeDetail()" data-icon="arrow-left"></button>
         <div class="detail-panel-title">${credor.name}</div>
         <button class="btn-icon" title="${T('credor_edit')}"
-          onclick="DH.credores.openEditModal('${credor.id}')">✏️</button>
+          onclick="DH.credores.openEditModal('${credor.id}')" data-icon="edit-2"></button>
       </div>
       <div class="detail-panel-body">
 
@@ -283,9 +289,9 @@ DH.dashboard = (() => {
         <div style="text-align:center;padding:1rem;background:var(--surface-2);border-radius:var(--radius-lg);">
           <div class="credor-avatar" style="margin:0 auto 1rem;width:56px;height:56px;font-size:1.5rem;">${DH.ui.getInitials(credor.name)}</div>
           <div style="font-size:1rem;font-weight:700;">${credor.name}</div>
-          <div class="text-muted text-small">📍 ${credor.city}/${credor.state}${credor.phone ? ' · 📞 ' + credor.phone : ''}</div>
-          <div class="copy-btn" style="margin:.75rem auto 0;display:inline-flex;" onclick="DH.dashboard.copyLink('${link}')">
-            🔗 ${T('credor_copy_link')}
+          <div class="text-muted text-small"><span data-icon="map-pin"></span> ${credor.city}/${credor.state}${credor.phone ? ' · <span data-icon=\"phone\"></span> ' + credor.phone : ''}</div>
+          <div class="copy-btn" style="margin:.75rem auto 0;display:inline-flex;" onclick="DH.dashboard.copyLink('${creditorId}')">
+            <span data-icon="link"></span> ${T('credor_copy_link')}
           </div>
         </div>
 
@@ -293,15 +299,15 @@ DH.dashboard = (() => {
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;text-align:center;">
           <div style="background:var(--danger-dim);border-radius:var(--radius);padding:.85rem;">
             <div class="text-xs text-muted">${T('credor_total')}</div>
-            <div style="font-weight:800;color:var(--danger);font-size:1rem;">${C(s.totalDebt)}</div>
+            <div style="font-weight:800;color:var(--danger);font-size:1rem;">${C(s.totalDebt, s.currency)}</div>
           </div>
           <div style="background:var(--success-dim);border-radius:var(--radius);padding:.85rem;">
             <div class="text-xs text-muted">${T('credor_paid')}</div>
-            <div style="font-weight:800;color:var(--success);font-size:1rem;">${C(s.totalPaid)}</div>
+            <div style="font-weight:800;color:var(--success);font-size:1rem;">${C(s.totalPaid, s.currency)}</div>
           </div>
           <div style="background:var(--warning-dim);border-radius:var(--radius);padding:.85rem;">
             <div class="text-xs text-muted">${T('credor_balance')}</div>
-            <div style="font-weight:800;color:var(--warning);font-size:1rem;">${C(s.balance)}</div>
+            <div style="font-weight:800;color:var(--warning);font-size:1rem;">${C(s.balance, s.currency)}</div>
           </div>
         </div>
 
@@ -329,36 +335,35 @@ DH.dashboard = (() => {
         <!-- Debits List -->
         <div class="section">
           <div class="section-header">
-            <div class="section-title">📋 ${T('debitos_title')}</div>
+            <div class="section-title"><span data-icon="list"></span> ${T('debitos_title')}</div>
           </div>
           ${debits.length === 0
-            ? DH.ui.emptyState('📋', 'debit_empty', 'debit_empty_sub')
+            ? DH.ui.emptyState('list', 'debit_empty', 'debit_empty_sub')
             : `<div style="display:flex;flex-direction:column;gap:.6rem;">
                 ${debits.map(d => {
                   const paid = DH.data.pagamentos.totalPaidForDebit(d.id);
                   const rem  = Math.max(0, d.amount - paid);
+                  const typeIcon = d.type === 'recurring' ? 'repeat' : d.type === 'installment' ? 'calendar' : 'dollar-sign';
                   return `
                     <div class="debit-item" style="cursor:default;">
-                      <div class="debit-item-icon" style="background:var(--accent-dim)">
-                        ${d.type === 'recurring' ? '🔄' : d.type === 'installment' ? '📅' : '💸'}
-                      </div>
+                      <div class="debit-item-icon" style="background:var(--accent-dim)" data-icon="${typeIcon}"></div>
                       <div class="debit-item-body">
                         <div class="debit-item-desc">${d.description}</div>
                         <div class="debit-item-meta">
-                          ${DH.ui.typeChip(d.type, d.installments)} · ${DH.ui.fmtDate(d.date)}
-                          ${d.type === 'installment' ? `<br><span class="text-xs" style="color:var(--success)">Pago: ${C(paid)} · Restante: ${C(rem)}</span>` : ''}
+                          ${DH.ui.typeChip(d.type, d.installments)} ${categoryChip(d.category)} · ${DH.ui.fmtDate(d.date)}
+                          ${d.type === 'installment' ? `<br><span class="text-xs" style="color:var(--success)">${T('debit_paid_amount')}: ${C(paid, d.currency)} · ${T('debit_remaining')}: ${C(rem, d.currency)}</span>` : ''}
                         </div>
                       </div>
                       <div class="debit-item-right">
                         <div class="debit-item-amount ${d.status === 'paid' ? 'text-muted' : ''}" style="${d.status === 'paid' ? 'text-decoration:line-through;' : 'color:var(--danger);'}">
-                          ${C(d.amount)}
+                          ${C(d.amount, d.currency)}
                         </div>
                         ${DH.ui.statusBadge(d.status)}
                         <div style="display:flex;gap:.3rem;margin-top:.4rem;justify-content:flex-end;">
                           <button class="btn-icon" style="width:28px;height:28px;font-size:.8rem;" title="${T('debit_edit')}"
-                            onclick="DH.debitos.openEditDebitModal('${d.id}')">✏️</button>
+                            onclick="DH.debitos.openEditDebitModal('${d.id}')" data-icon="edit-2"></button>
                           <button class="btn-icon" style="width:28px;height:28px;font-size:.8rem;" title="${T('debit_delete')}"
-                            onclick="DH.debitos.deleteDebit('${d.id}')">🗑️</button>
+                            onclick="DH.debitos.deleteDebit('${d.id}')" data-icon="trash-2"></button>
                         </div>
                       </div>
                     </div>
@@ -371,21 +376,21 @@ DH.dashboard = (() => {
         <!-- Payments List -->
         <div class="section">
           <div class="section-header">
-            <div class="section-title">💸 ${T('payments_title')}</div>
+            <div class="section-title"><span data-icon="credit-card"></span> ${T('payments_title')}</div>
           </div>
           ${payments.length === 0
-            ? DH.ui.emptyState('💸', 'payment_empty', 'payment_empty_sub')
+            ? DH.ui.emptyState('credit-card', 'payment_empty', 'payment_empty_sub')
             : `<div style="display:flex;flex-direction:column;gap:.5rem;">
                 ${payments.sort((a,b) => new Date(b.date) - new Date(a.date)).map(p => {
                   const deb = DH.data.debitos.getById(p.debitId);
                   return `
                     <div class="payment-item">
-                      <div class="payment-icon">💸</div>
+                      <div class="payment-icon" data-icon="dollar-sign"></div>
                       <div class="payment-body">
                         <div class="payment-desc">${deb ? deb.description : '—'}</div>
                         <div class="payment-date">${DH.ui.fmtDate(p.date)}${p.note ? ' · ' + p.note : ''}</div>
                       </div>
-                      <div class="payment-amount">+ ${C(p.amount)}</div>
+                      <div class="payment-amount">+ ${C(p.amount, deb ? deb.currency : 'BRL')}</div>
                     </div>
                   `;
                 }).join('')}
@@ -397,6 +402,7 @@ DH.dashboard = (() => {
 
     panel.classList.add('open');
     if (overlay) overlay.classList.add('open');
+    DH.icons.mount(panel);
   }
 
   function closeDetail() {
@@ -427,7 +433,7 @@ DH.dashboard = (() => {
       <div class="animate-in">
         <div class="page-header flex justify-between items-center flex-wrap gap-3">
           <div>
-            <h1 class="page-title">📋 ${T('debitos_title')}</h1>
+            <h1 class="page-title"><span data-icon="list"></span> ${T('debitos_title')}</h1>
             <p class="page-subtitle">${T('debitos_subtitle')}</p>
           </div>
           <div class="page-actions">
@@ -438,13 +444,14 @@ DH.dashboard = (() => {
         </div>
 
         ${debits.length === 0
-          ? DH.ui.emptyState('📋', 'debit_empty', 'debit_empty_sub')
+          ? DH.ui.emptyState('list', 'debit_empty', 'debit_empty_sub')
           : `<div class="table-wrapper">
               <table class="table">
                 <thead>
                   <tr>
                     <th>${T('debit_description')}</th>
                     <th>${T('debit_creditor')}</th>
+                    <th>${T('debit_category')}</th>
                     <th>${T('debit_type')}</th>
                     <th>${T('debit_date')}</th>
                     <th>${T('debit_amount')}</th>
@@ -461,17 +468,18 @@ DH.dashboard = (() => {
                       <tr>
                         <td><strong>${d.description}</strong></td>
                         <td>${cred ? cred.name : '—'}</td>
+                        <td>${d.category ? categoryChip(d.category) : '<span class="text-muted">—</span>'}</td>
                         <td>${DH.ui.typeChip(d.type, d.installments)}</td>
                         <td>${DH.ui.fmtDate(d.date)}</td>
-                        <td style="color:var(--danger);font-weight:700;">${C(d.amount)}</td>
-                        <td style="color:var(--success);font-weight:700;">${C(paid)}</td>
+                        <td style="color:var(--danger);font-weight:700;">${C(d.amount, d.currency)}</td>
+                        <td style="color:var(--success);font-weight:700;">${C(paid, d.currency)}</td>
                         <td>${DH.ui.statusBadge(d.status)}</td>
                         <td>
                           <div style="display:flex;gap:.3rem;">
                             <button class="btn-icon" title="${T('debit_edit')}"
-                              onclick="DH.debitos.openEditDebitModal('${d.id}')">✏️</button>
+                              onclick="DH.debitos.openEditDebitModal('${d.id}')" data-icon="edit-2"></button>
                             <button class="btn-icon" title="${T('debit_delete')}"
-                              onclick="DH.debitos.deleteDebit('${d.id}')">🗑️</button>
+                              onclick="DH.debitos.deleteDebit('${d.id}')" data-icon="trash-2"></button>
                           </div>
                         </td>
                       </tr>
@@ -500,7 +508,7 @@ DH.dashboard = (() => {
       <div class="animate-in">
         <div class="page-header flex justify-between items-center flex-wrap gap-3">
           <div>
-            <h1 class="page-title">💸 ${T('payments_title')}</h1>
+            <h1 class="page-title"><span data-icon="credit-card"></span> ${T('payments_title')}</h1>
             <p class="page-subtitle">${T('payments_subtitle')}</p>
           </div>
           <div class="page-actions">
@@ -511,7 +519,7 @@ DH.dashboard = (() => {
         </div>
 
         ${payments.length === 0
-          ? DH.ui.emptyState('💸', 'payment_empty', 'payment_empty_sub')
+          ? DH.ui.emptyState('credit-card', 'payment_empty', 'payment_empty_sub')
           : `<div class="table-wrapper">
               <table class="table">
                 <thead>
@@ -532,7 +540,7 @@ DH.dashboard = (() => {
                         <td><strong>${deb ? deb.description : '—'}</strong></td>
                         <td>${cred ? cred.name : '—'}</td>
                         <td>${DH.ui.fmtDate(p.date)}</td>
-                        <td style="color:var(--success);font-weight:700;">${C(p.amount)}</td>
+                        <td style="color:var(--success);font-weight:700;">${C(p.amount, deb ? deb.currency : 'BRL')}</td>
                         <td class="text-muted">${p.note || '—'}</td>
                       </tr>
                     `;
@@ -555,14 +563,14 @@ DH.dashboard = (() => {
     main.innerHTML = `
       <div class="animate-in">
         <div class="page-header">
-          <h1 class="page-title">⚙️ ${T('settings_title')}</h1>
+          <h1 class="page-title"><span data-icon="settings"></span> ${T('settings_title')}</h1>
         </div>
 
         <div style="display:grid;gap:1.5rem;max-width:600px;">
 
           <!-- Account -->
           <div class="card">
-            <h3 style="margin-bottom:1.25rem;">👤 ${T('settings_account')}</h3>
+            <h3 style="margin-bottom:1.25rem;display:flex;align-items:center;gap:.5rem;"><span data-icon="user"></span> ${T('settings_account')}</h3>
             <div class="form-group" style="margin-bottom:1rem;">
               <label class="form-label">${T('field_name')}</label>
               <div style="display:flex;gap:.6rem;">
@@ -580,13 +588,13 @@ DH.dashboard = (() => {
 
           <!-- Change Password -->
           <div class="card">
-            <h3 style="margin-bottom:1.25rem;">🔐 ${T('change_password_title')}</h3>
+            <h3 style="margin-bottom:1.25rem;display:flex;align-items:center;gap:.5rem;"><span data-icon="lock"></span> ${T('change_password_title')}</h3>
             <form id="change-password-form" style="display:flex;flex-direction:column;gap:1rem;">
               <div class="form-group">
                 <label class="form-label">${T('field_current_password')}</label>
                 <div class="input-group">
                   <input type="password" class="form-input" id="change-current-password" autocomplete="current-password">
-                  <button type="button" class="input-action" data-password-toggle="change-current-password">👁️</button>
+                  <button type="button" class="input-action" data-password-toggle="change-current-password" data-icon="eye"></button>
                 </div>
                 <span class="form-error hidden" id="change-current-password-error"></span>
               </div>
@@ -594,7 +602,7 @@ DH.dashboard = (() => {
                 <label class="form-label">${T('field_new_password')}</label>
                 <div class="input-group">
                   <input type="password" class="form-input" id="change-new-password" autocomplete="new-password">
-                  <button type="button" class="input-action" data-password-toggle="change-new-password">👁️</button>
+                  <button type="button" class="input-action" data-password-toggle="change-new-password" data-icon="eye"></button>
                 </div>
                 <div class="password-strength">
                   <div class="password-strength-bar"><div class="password-strength-fill" id="change-strength-bar"></div></div>
@@ -606,7 +614,7 @@ DH.dashboard = (() => {
                 <label class="form-label">${T('field_confirm_password')}</label>
                 <div class="input-group">
                   <input type="password" class="form-input" id="change-confirm-password" autocomplete="new-password">
-                  <button type="button" class="input-action" data-password-toggle="change-confirm-password">👁️</button>
+                  <button type="button" class="input-action" data-password-toggle="change-confirm-password" data-icon="eye"></button>
                 </div>
                 <span class="form-error hidden" id="change-confirm-password-error"></span>
               </div>
@@ -616,35 +624,24 @@ DH.dashboard = (() => {
 
           <!-- Appearance -->
           <div class="card">
-            <h3 style="margin-bottom:1.25rem;">🎨 ${T('settings_theme')}</h3>
+            <h3 style="margin-bottom:1.25rem;display:flex;align-items:center;gap:.5rem;"><span data-icon="palette"></span> ${T('settings_theme')}</h3>
             <div style="display:flex;gap:.75rem;">
               <button class="btn ${DH.state.theme === 'dark' ? 'btn-primary' : 'btn-ghost'}"
-                onclick="DH.ui.applyTheme('dark')">🌙 ${T('settings_theme_dark')}</button>
+                onclick="DH.ui.applyTheme('dark')"><span data-icon="moon"></span> ${T('settings_theme_dark')}</button>
               <button class="btn ${DH.state.theme === 'light' ? 'btn-primary' : 'btn-ghost'}"
-                onclick="DH.ui.applyTheme('light')">☀️ ${T('settings_theme_light')}</button>
+                onclick="DH.ui.applyTheme('light')"><span data-icon="sun"></span> ${T('settings_theme_light')}</button>
             </div>
           </div>
 
-          <!-- Language & Currency -->
+          <!-- Language -->
           <div class="card">
-            <h3 style="margin-bottom:1.25rem;">🌐 ${T('settings_language')} & ${T('currency_label')}</h3>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-              <div class="form-group">
-                <label class="form-label">${T('lang_label')}</label>
-                <select class="form-select" data-lang-select>
-                  <option value="pt">🇧🇷 Português</option>
-                  <option value="en">🇺🇸 English</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label">${T('currency_label')}</label>
-                <select class="form-select" data-currency-select>
-                  <option value="BRL">${T('opt_currency_brl_full')}</option>
-                  <option value="EUR">${T('opt_currency_eur_full')}</option>
-                  <option value="USD">${T('opt_currency_usd_full')}</option>
-                  <option value="GBP">${T('opt_currency_gbp_full')}</option>
-                </select>
-              </div>
+            <h3 style="margin-bottom:1.25rem;display:flex;align-items:center;gap:.5rem;"><span data-icon="globe"></span> ${T('settings_language')}</h3>
+            <div class="form-group">
+              <label class="form-label">${T('lang_label')}</label>
+              <select class="form-select" data-lang-select>
+                <option value="pt">Português</option>
+                <option value="en">English</option>
+              </select>
             </div>
           </div>
 
@@ -655,7 +652,6 @@ DH.dashboard = (() => {
     // Re-init after render
     DH.auth.initDashboard();
     DH.ui.initLanguageSelectors();
-    DH.ui.initCurrencySelectors();
   }
 
   function saveProfileName() {

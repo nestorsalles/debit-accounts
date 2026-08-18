@@ -6,7 +6,7 @@
   <meta name="description" content="DebitHub — Dashboard de controle de débitos pessoais.">
   <title>Dashboard — DebitHub</title>
   <link rel="stylesheet" href="css/styles.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='rgb(59,109,216)'/><text x='50' y='68' font-family='Arial,sans-serif' font-size='56' font-weight='700' fill='white' text-anchor='middle'>D</text></svg>">
 </head>
 <body>
 
@@ -18,10 +18,10 @@
      HEADER
 ═══════════════════════════════════════ -->
 <header class="app-header">
-  <button class="btn-icon" id="hamburger-btn" style="display:none;" title="Menu">☰</button>
+  <button class="btn-icon" id="hamburger-btn" style="display:none;" title="Menu" data-icon="menu"></button>
 
   <a href="dashboard.html" class="header-brand">
-    <div class="header-logo">💳</div>
+    <div class="header-logo" data-icon="wallet"></div>
     <div class="header-brand-name">Debit<span>Hub</span></div>
   </a>
 
@@ -29,16 +29,10 @@
 
   <div class="header-controls">
     <select class="toolbar-select" data-lang-select style="font-size:.78rem;">
-      <option value="pt">🇧🇷 PT</option>
-      <option value="en">🇺🇸 EN</option>
+      <option value="pt">PT</option>
+      <option value="en">EN</option>
     </select>
-    <select class="toolbar-select" data-currency-select style="font-size:.78rem;">
-      <option value="BRL">R$</option>
-      <option value="EUR">€</option>
-      <option value="USD">$</option>
-      <option value="GBP">£</option>
-    </select>
-    <button class="toggle-theme-btn" onclick="DH.ui.toggleTheme()" title="Alternar tema">☀️</button>
+    <button class="toggle-theme-btn" onclick="DH.ui.toggleTheme()" title="Alternar tema" data-icon="sun"></button>
 
     <div class="header-user">
       <div class="user-avatar" id="user-avatar-btn" title="Minha conta">?</div>
@@ -54,11 +48,11 @@
   </div>
   <div class="user-dropdown-divider"></div>
   <button class="dropdown-item" onclick="DH.dashboard.showView('settings');document.getElementById('user-dropdown').classList.remove('open')">
-    ⚙️ <span data-i18n="nav_settings">Configurações</span>
+    <span data-icon="settings"></span> <span data-i18n="nav_settings">Configurações</span>
   </button>
   <div class="user-dropdown-divider"></div>
   <button class="dropdown-item danger" onclick="DH.app.logout()">
-    🚪 <span data-i18n="nav_logout">Sair</span>
+    <span data-icon="log-out"></span> <span data-i18n="nav_logout">Sair</span>
   </button>
 </div>
 
@@ -69,45 +63,45 @@
   <span class="nav-section-label">Menu</span>
 
   <button class="nav-item active" data-view="overview">
-    <span class="nav-icon">📊</span>
+    <span class="nav-icon" data-icon="bar-chart-2"></span>
     <span data-i18n="nav_overview">Visão Geral</span>
   </button>
   <button class="nav-item" data-view="credores">
-    <span class="nav-icon">👥</span>
+    <span class="nav-icon" data-icon="users"></span>
     <span data-i18n="nav_credores">Credores</span>
   </button>
   <button class="nav-item" data-view="debitos">
-    <span class="nav-icon">📋</span>
+    <span class="nav-icon" data-icon="list"></span>
     <span data-i18n="nav_debitos">Débitos</span>
   </button>
   <button class="nav-item" data-view="payments">
-    <span class="nav-icon">💸</span>
+    <span class="nav-icon" data-icon="credit-card"></span>
     <span data-i18n="nav_payments">Pagamentos</span>
   </button>
 
   <span class="nav-section-label" style="margin-top:auto">Ações rápidas</span>
 
   <button class="nav-item" onclick="DH.credores.openNewModal()">
-    <span class="nav-icon">➕</span>
+    <span class="nav-icon" data-icon="plus"></span>
     <span data-i18n="btn_new_credor">+ Novo credor</span>
   </button>
   <button class="nav-item" onclick="DH.debitos.openNewDebitModal()">
-    <span class="nav-icon">📝</span>
+    <span class="nav-icon" data-icon="file-plus"></span>
     <span data-i18n="btn_new_debit">+ Novo débito</span>
   </button>
   <button class="nav-item" onclick="DH.debitos.openPaymentModal()">
-    <span class="nav-icon">💳</span>
+    <span class="nav-icon" data-icon="dollar-sign"></span>
     <span data-i18n="btn_new_payment">+ Registrar pagamento</span>
   </button>
 
   <div class="divider"></div>
 
   <button class="nav-item" data-view="settings">
-    <span class="nav-icon">⚙️</span>
+    <span class="nav-icon" data-icon="settings"></span>
     <span data-i18n="nav_settings">Configurações</span>
   </button>
   <button class="nav-item" onclick="DH.app.logout()" style="color:var(--danger);">
-    <span class="nav-icon">🚪</span>
+    <span class="nav-icon" data-icon="log-out"></span>
     <span data-i18n="nav_logout">Sair</span>
   </button>
 
@@ -142,7 +136,7 @@
   <div class="modal">
     <div class="modal-header">
       <h2 class="modal-title" id="credor-modal-title">Novo credor</h2>
-      <button class="modal-close" onclick="DH.ui.closeModal('credor-modal-overlay')">✕</button>
+      <button class="modal-close" onclick="DH.ui.closeModal('credor-modal-overlay')" data-icon="x"></button>
     </div>
     <form id="credor-form" novalidate>
       <input type="hidden" id="credor-id">
@@ -185,7 +179,7 @@
   <div class="modal">
     <div class="modal-header">
       <h2 class="modal-title" id="debit-modal-title">Novo débito</h2>
-      <button class="modal-close" onclick="DH.ui.closeModal('debit-modal-overlay')">✕</button>
+      <button class="modal-close" onclick="DH.ui.closeModal('debit-modal-overlay')" data-icon="x"></button>
     </div>
     <form id="debit-form" novalidate>
       <input type="hidden" id="debit-id">
@@ -205,6 +199,19 @@
           <span class="form-error hidden" id="debit-description-error"></span>
         </div>
 
+        <div class="form-group">
+          <label class="form-label" data-i18n="debit_category">Categoria</label>
+          <select class="form-select" id="debit-category">
+            <option value="" data-i18n="debit_select_category">Sem categoria</option>
+            <option value="food" data-i18n="category_food">Alimentação</option>
+            <option value="transport" data-i18n="category_transport">Transporte</option>
+            <option value="health" data-i18n="category_health">Saúde</option>
+            <option value="housing" data-i18n="category_housing">Moradia</option>
+            <option value="leisure" data-i18n="category_leisure">Lazer</option>
+            <option value="education" data-i18n="category_education">Educação</option>
+          </select>
+        </div>
+
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
           <div class="form-group">
             <label class="form-label" data-i18n="debit_date">Data de emissão</label>
@@ -212,11 +219,21 @@
             <span class="form-error hidden" id="debit-date-error"></span>
           </div>
           <div class="form-group">
-            <label class="form-label" data-i18n="debit_amount">Valor (R$)</label>
+            <label class="form-label" data-i18n="debit_amount">Valor</label>
             <input type="number" class="form-input" id="debit-amount"
               placeholder="0,00" min="0.01" step="0.01">
             <span class="form-error hidden" id="debit-amount-error"></span>
           </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" data-i18n="debit_currency">Moeda</label>
+          <select class="form-select" id="debit-currency">
+            <option value="BRL" data-i18n="opt_currency_brl">R$ Real</option>
+            <option value="EUR" data-i18n="opt_currency_eur">€ Euro</option>
+            <option value="USD" data-i18n="opt_currency_usd">$ Dólar</option>
+            <option value="GBP" data-i18n="opt_currency_gbp">£ Libra</option>
+          </select>
         </div>
 
         <div class="form-group">
@@ -251,7 +268,7 @@
   <div class="modal">
     <div class="modal-header">
       <h2 class="modal-title" data-i18n="modal_new_payment">Registrar pagamento</h2>
-      <button class="modal-close" onclick="DH.ui.closeModal('payment-modal-overlay')">✕</button>
+      <button class="modal-close" onclick="DH.ui.closeModal('payment-modal-overlay')" data-icon="x"></button>
     </div>
     <form id="payment-form" novalidate>
       <div class="modal-body">
@@ -273,7 +290,7 @@
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
           <div class="form-group">
-            <label class="form-label" data-i18n="payment_amount">Valor pago (R$)</label>
+            <label class="form-label" data-i18n="payment_amount">Valor pago</label>
             <input type="number" class="form-input" id="payment-amount"
               placeholder="0,00" min="0.01" step="0.01">
             <span class="form-error hidden" id="payment-amount-error"></span>
@@ -304,8 +321,8 @@
 <div class="modal-overlay modal-sm" id="confirm-modal">
   <div class="modal">
     <div class="modal-header">
-      <h2 class="modal-title">⚠️ <span data-i18n="modal_confirm_delete">Confirmar exclusão</span></h2>
-      <button class="modal-close" id="confirm-close" onclick="DH.ui.closeModal('confirm-modal')">✕</button>
+      <h2 class="modal-title"><span data-icon="alert-triangle"></span> <span data-i18n="modal_confirm_delete">Confirmar exclusão</span></h2>
+      <button class="modal-close" id="confirm-close" onclick="DH.ui.closeModal('confirm-modal')" data-icon="x"></button>
     </div>
     <div class="modal-body">
       <p class="text-small" id="confirm-message"></p>
@@ -320,6 +337,7 @@
 <!-- ═══════════════════════════════════════
      SCRIPTS
 ═══════════════════════════════════════ -->
+<script src="js/icons.js"></script>
 <script src="js/i18n.js"></script>
 <script src="js/data.js"></script>
 <script src="js/ui.js"></script>
@@ -348,27 +366,21 @@ DH.app = {
   const s = DH.data.settings.get();
   DH.state.theme    = s.theme;
   DH.state.language = s.language;
-  DH.state.currency = s.currency;
 
   // Apply theme & i18n
   DH.ui.initTheme();
   DH.i18n.init();
   DH.i18n.applyTranslations();
+  DH.icons.mount();
 
   // Init controls
   DH.ui.initLanguageSelectors();
-  DH.ui.initCurrencySelectors();
   DH.ui.initMobileSidebar();
   DH.ui.initModalClosers();
   DH.ui.initUserDropdown();
   DH.ui.initSidebarNav();
 
-  // Update theme toggles
-  document.querySelectorAll('.toggle-theme-btn').forEach(btn => {
-    btn.textContent = s.theme === 'dark' ? '☀️' : '🌙';
-  });
   document.querySelectorAll('[data-lang-select]').forEach(el => el.value = s.language);
-  document.querySelectorAll('[data-currency-select]').forEach(el => el.value = s.currency);
 
   // Init modules
   DH.credores.init();

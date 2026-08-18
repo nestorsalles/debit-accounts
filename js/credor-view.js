@@ -1,150 +1,200 @@
 /* ============================================================
    DebitHub — Public Creditor View
-   Renders the public-facing page at credor.html#slug
+   Renders the public-facing page at credor.html#d=<encoded-data>
+   The data travels inside the link itself (self-contained snapshot),
+   so the page works for anyone, on any device — no login required.
+   A legacy credor.html#slug hash still works as a same-browser fallback.
    ============================================================ */
 
 window.DH = window.DH || {};
 
 DH.credorView = (() => {
   function T(k) { return DH.i18n.t(k); }
-  function C(v) { return DH.currency.format(v); }
+  function C(v, cur) { return DH.currency.format(v, cur); }
 
-  let showingExtrato = false;
+  let currentData   = null; // { credor, debtor, debits, payments }
+  let currentFilter = 'month';
+  let customFrom    = null;
+  let customTo      = null;
+
+  const CATEGORY_KEYS = {
+    food: 'category_food', transport: 'category_transport', health: 'category_health',
+    housing: 'category_housing', leisure: 'category_leisure', education: 'category_education',
+  };
+  function categoryChip(cat) {
+    if (!cat || !CATEGORY_KEYS[cat]) return '';
+    return `<span class="chip"><span data-icon="tag"></span>${T(CATEGORY_KEYS[cat])}</span>`;
+  }
 
   function init() {
-    // Read slug from hash
-    const slug = window.location.hash.replace('#', '').trim();
-    if (!slug) { renderNotFound(); return; }
+    const hash = window.location.hash.replace('#', '');
+    currentFilter = 'month'; customFrom = null; customTo = null;
 
-    const credor = DH.data.credores.getBySlug(slug);
-    if (!credor) { renderNotFound(); return; }
+    if (!hash) { currentData = null; renderNotFound(); return; }
 
-    renderDashboard(credor);
+    if (hash.startsWith('d=')) {
+      const decoded = DH.data.share.decode(hash.slice(2));
+      if (!decoded || !decoded.credor) { currentData = null; renderNotFound(); return; }
+      currentData = decoded;
+    } else {
+      // Legacy same-browser lookup (only works if this browser holds the data)
+      const credor = DH.data.credores.getBySlug(hash);
+      if (!credor) { currentData = null; renderNotFound(); return; }
+      currentData = DH.data.credores.snapshotFor(credor.id);
+    }
+
+    renderDashboard();
   }
 
   function renderNotFound() {
-    document.getElementById('credor-content').innerHTML = `
-      <div class="empty-state" style="padding:4rem 2rem;">
-        <div class="empty-icon">😕</div>
-        <h3>${T('pub_not_found')}</h3>
-        <p>${T('pub_not_found_sub')}</p>
-      </div>
-    `;
+    const heroName = document.getElementById('hero-name');
+    const heroSub  = document.getElementById('hero-sub');
+    if (heroName) heroName.textContent = T('pub_not_found');
+    if (heroSub)  heroSub.textContent  = '';
+    const content = document.getElementById('credor-content');
+    if (content) {
+      content.innerHTML = `
+        <div class="empty-state" style="padding:4rem 2rem;">
+          <div class="empty-icon" data-icon="alert-circle"></div>
+          <h3>${T('pub_not_found')}</h3>
+          <p>${T('pub_not_found_sub')}</p>
+        </div>
+      `;
+    }
+    DH.icons.mount();
   }
 
-  function renderDashboard(credor) {
-    showingExtrato = false;
-    const s       = DH.data.analytics.creditorSummary(credor.id);
-    const debits  = DH.data.debitos.getByCreditor(credor.id);
-    const payments = DH.data.pagamentos.getByCreditor(credor.id);
+  function rangeForFilter() {
+    return currentFilter === 'custom'
+      ? { from: customFrom ? new Date(customFrom) : null, to: customTo ? new Date(customTo + 'T23:59:59') : null }
+      : DH.dates.rangeFromFilter(currentFilter);
+  }
 
-    // Current month active debits
-    const now = new Date();
-    const thisMonthDebits = debits.filter(d => {
-      const dt = new Date(d.date + 'T00:00:00');
-      return dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
-    });
-    const futureDebits = debits.filter(d => {
-      const dt = new Date(d.date + 'T00:00:00');
-      return dt > now && d.status !== 'paid';
-    });
+  function inRange(dateStr, from, to) {
+    if (!from && !to) return true;
+    const dt = new Date(dateStr + 'T00:00:00');
+    if (from && dt < from) return false;
+    if (to   && dt > to)   return false;
+    return true;
+  }
 
-    // Update hero
+  function paidForDebit(debitId) {
+    return currentData.payments.filter(p => p.debitId === debitId).reduce((s, p) => s + p.amount, 0);
+  }
+
+  function renderFilterBar() {
+    return `
+      <div class="filter-bar">
+        <span class="filter-label">${T('filter_label')}</span>
+        ${['today','month','3m','6m','1y'].map(f => `
+          <button class="filter-btn ${currentFilter === f ? 'active' : ''}"
+            onclick="DH.credorView.setFilter('${f}')">${T('filter_' + f)}</button>
+        `).join('')}
+        <button class="filter-btn ${currentFilter === 'custom' ? 'active' : ''}"
+          onclick="DH.credorView.setFilter('custom')">${T('filter_custom')}</button>
+        ${currentFilter === 'custom' ? `
+          <div class="filter-date-range">
+            <span>${T('filter_from')}:</span>
+            <input type="date" value="${customFrom || ''}"
+              onchange="DH.credorView.setCustomFrom(this.value)" max="${new Date().toISOString().split('T')[0]}">
+            <span>${T('filter_to')}:</span>
+            <input type="date" value="${customTo || ''}"
+              onchange="DH.credorView.setCustomTo(this.value)" max="${new Date().toISOString().split('T')[0]}">
+          </div>` : ''}
+      </div>`;
+  }
+
+  function setFilter(f) { currentFilter = f; renderDashboard(); }
+  function setCustomFrom(v) { customFrom = v; renderDashboard(); }
+  function setCustomTo(v)   { customTo   = v; renderDashboard(); }
+
+  function renderDashboard() {
+    if (!currentData) { renderNotFound(); return; }
+    const { credor, debtor, debits, payments } = currentData;
+
     const heroName = document.getElementById('hero-name');
     const heroSub  = document.getElementById('hero-sub');
     if (heroName) heroName.textContent = credor.name;
-    if (heroSub)  heroSub.textContent  = `📍 ${credor.city}/${credor.state}`;
+    if (heroSub)  heroSub.textContent  = debtor.name || '';
+
+    const { from, to } = rangeForFilter();
+    const debitsInRange   = debits.filter(d => inRange(d.date, from, to));
+    const paymentsInRange = payments.filter(p => inRange(p.date, from, to));
+
+    const totalDebt = debitsInRange.reduce((s, d) => s + d.amount, 0);
+    const totalPaid = paymentsInRange.reduce((s, p) => s + p.amount, 0);
+    const balance   = Math.max(0, debitsInRange.reduce((s, d) => s + Math.max(0, d.amount - paidForDebit(d.id)), 0));
+    const codes = [...new Set(debitsInRange.map(d => d.currency || 'BRL'))];
+    const cur = codes.length === 1 ? codes[0] : 'BRL';
 
     const content = document.getElementById('credor-content');
     if (!content) return;
 
     content.innerHTML = `
+      ${renderFilterBar()}
+
       <!-- Summary Cards -->
       <div class="stats-grid">
         <div class="stat-card" style="--accent-color:var(--danger)">
-          <div class="stat-icon">💰</div>
+          <div class="stat-icon" data-icon="wallet"></div>
           <div class="stat-label">${T('pub_total')}</div>
-          <div class="stat-value" style="color:var(--danger)">${C(s.balance)}</div>
-          <div class="stat-sub">${s.activeDebits.length} ${T('label_open')}</div>
+          <div class="stat-value" style="color:var(--danger)">${C(balance, cur)}</div>
+          <div class="stat-sub">${debitsInRange.length} ${T('label_active_debits')}</div>
         </div>
         <div class="stat-card" style="--accent-color:var(--success)">
-          <div class="stat-icon">✅</div>
+          <div class="stat-icon" data-icon="check-circle"></div>
           <div class="stat-label">${T('pub_paid')}</div>
-          <div class="stat-value" style="color:var(--success)">${C(s.totalPaid)}</div>
-          <div class="stat-sub">${s.paymentCount} ${T('label_payments')}</div>
+          <div class="stat-value" style="color:var(--success)">${C(totalPaid, cur)}</div>
+          <div class="stat-sub">${paymentsInRange.length} ${T('label_payments')}</div>
         </div>
-        <div class="stat-card" style="--accent-color:var(--warning)">
-          <div class="stat-icon">📅</div>
-          <div class="stat-label">${T('pub_this_month')}</div>
-          <div class="stat-value" style="color:var(--warning)">${C(s.thisMonthDebt)}</div>
-          <div class="stat-sub">${now.toLocaleDateString('pt-BR', {month:'long', year:'numeric'})}</div>
+        <div class="stat-card" style="--accent-color:var(--accent)">
+          <div class="stat-icon" data-icon="dollar-sign"></div>
+          <div class="stat-label">${T('pub_active')}</div>
+          <div class="stat-value">${C(totalDebt, cur)}</div>
+          <div class="stat-sub">${T('filter_' + (currentFilter === 'custom' ? 'custom' : currentFilter))}</div>
         </div>
       </div>
 
-      <!-- This Month -->
+      <!-- Debits in period -->
       <div class="card">
         <div class="section-header">
-          <div class="section-title">📅 ${T('pub_this_month_title')}</div>
+          <div class="section-title"><span data-icon="list"></span> ${T('debitos_title')}</div>
         </div>
-        ${thisMonthDebits.length === 0
-          ? `<p class="text-muted text-small" style="padding:.5rem 0;">${T('pub_no_debt_month')}</p>`
-          : `<div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.75rem;">
-              ${thisMonthDebits.map(d => renderDebitItem(d)).join('')}
-            </div>`
-        }
-      </div>
-
-      <!-- Active Debits -->
-      <div class="card">
-        <div class="section-header">
-          <div class="section-title">🔴 ${T('pub_active')}</div>
-        </div>
-        ${s.activeDebits.length === 0
+        ${debitsInRange.length === 0
           ? `<p class="text-muted text-small" style="padding:.5rem 0;">${T('pub_no_debt')}</p>`
           : `<div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.75rem;">
-              ${s.activeDebits.map(d => renderDebitItem(d)).join('')}
+              ${debitsInRange.sort((a, b) => new Date(b.date) - new Date(a.date)).map(d => renderDebitItem(d)).join('')}
             </div>`
         }
       </div>
-
-      <!-- Paid Debits -->
-      ${s.paidDebits.length > 0 ? `
-      <div class="card">
-        <div class="section-header">
-          <div class="section-title">✅ ${T('pub_paid_title')}</div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.75rem;">
-          ${s.paidDebits.map(d => renderDebitItem(d)).join('')}
-        </div>
-      </div>` : ''}
 
       <!-- Extrato button -->
       <button class="btn btn-ghost w-full" style="margin-top:.5rem;"
-        onclick="DH.credorView.showExtrato('${credor.id}')">
-        ${T('pub_btn_extrato')}
+        onclick="DH.credorView.showExtrato()">
+        <span data-icon="file-text"></span> ${T('pub_btn_extrato')}
       </button>
     `;
+    DH.icons.mount();
   }
 
   function renderDebitItem(d) {
-    const paid = DH.data.pagamentos.totalPaidForDebit(d.id);
+    const paid = paidForDebit(d.id);
     const rem  = Math.max(0, d.amount - paid);
+    const typeIcon = d.type === 'recurring' ? 'repeat' : d.type === 'installment' ? 'calendar' : 'dollar-sign';
     return `
       <div class="debit-item" style="cursor:default;">
-        <div class="debit-item-icon" style="background:${d.status === 'paid' ? 'var(--success-dim)' : 'var(--danger-dim)'}">
-          ${d.type === 'recurring' ? '🔄' : d.type === 'installment' ? '📅' : '💸'}
-        </div>
+        <div class="debit-item-icon" style="background:${d.status === 'paid' ? 'var(--success-dim)' : 'var(--danger-dim)'}" data-icon="${typeIcon}"></div>
         <div class="debit-item-body">
           <div class="debit-item-desc">${d.description}</div>
           <div class="debit-item-meta">
-            ${DH.ui.typeChip(d.type, d.installments)}
+            ${DH.ui.typeChip(d.type, d.installments)} ${categoryChip(d.category)}
             · ${DH.dates.formatDate(d.date)}
-            ${d.type === 'installment' ? `<br><span class="text-xs" style="color:var(--success)">Pago: ${DH.currency.format(paid)} · Restante: ${DH.currency.format(rem)}</span>` : ''}
+            ${d.type === 'installment' ? `<br><span class="text-xs" style="color:var(--success)">${T('debit_paid_amount')}: ${C(paid, d.currency)} · ${T('debit_remaining')}: ${C(rem, d.currency)}</span>` : ''}
           </div>
         </div>
         <div class="debit-item-right">
           <div class="debit-item-amount" style="${d.status === 'paid' ? 'text-decoration:line-through;color:var(--text-muted)' : 'color:var(--danger);font-weight:700;'}">
-            ${DH.currency.format(d.amount)}
+            ${C(d.amount, d.currency)}
           </div>
           ${DH.ui.statusBadge(d.status)}
         </div>
@@ -152,19 +202,21 @@ DH.credorView = (() => {
     `;
   }
 
-  function showExtrato(creditorId) {
-    showingExtrato = true;
-    const payments = DH.data.pagamentos.getByCreditor(creditorId).sort((a, b) => new Date(b.date) - new Date(a.date));
-    const credor   = DH.data.credores.getById(creditorId);
-    const content  = document.getElementById('credor-content');
+  function showExtrato() {
+    if (!currentData) return;
+    const { payments, debits } = currentData;
+    const debitMap = {};
+    debits.forEach(d => { debitMap[d.id] = d; });
+    const sorted = payments.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+    const content = document.getElementById('credor-content');
 
     content.innerHTML = `
       <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">
-        <button class="btn btn-ghost btn-sm" onclick="DH.credorView.init()">${T('pub_btn_back')}</button>
-        <h2 class="section-title">📋 ${T('pub_full_statement')}</h2>
+        <button class="btn btn-ghost btn-sm" onclick="DH.credorView.renderCurrent()"><span data-icon="arrow-left"></span> ${T('pub_btn_back')}</button>
+        <h2 class="section-title"><span data-icon="file-text"></span> ${T('pub_full_statement')}</h2>
       </div>
-      ${payments.length === 0
-        ? DH.ui.emptyState('💸', 'payment_empty', 'payment_empty_sub')
+      ${sorted.length === 0
+        ? DH.ui.emptyState('credit-card', 'payment_empty', 'payment_empty_sub')
         : `<div class="table-wrapper">
             <table class="table">
               <thead>
@@ -176,13 +228,13 @@ DH.credorView = (() => {
                 </tr>
               </thead>
               <tbody>
-                ${payments.map(p => {
-                  const deb = DH.data.debitos.getById(p.debitId);
+                ${sorted.map(p => {
+                  const deb = debitMap[p.debitId];
                   return `
                     <tr>
                       <td><strong>${deb ? deb.description : '—'}</strong></td>
                       <td>${DH.dates.formatDate(p.date)}</td>
-                      <td style="color:var(--success);font-weight:700;">+ ${DH.currency.format(p.amount)}</td>
+                      <td style="color:var(--success);font-weight:700;">+ ${C(p.amount, deb ? deb.currency : 'BRL')}</td>
                       <td class="text-muted">${p.note || '—'}</td>
                     </tr>
                   `;
@@ -191,11 +243,14 @@ DH.credorView = (() => {
             </table>
           </div>
           <div style="text-align:right;margin-top:1rem;font-weight:700;color:var(--success);">
-            ${T('label_total_received')}: ${DH.currency.format(payments.reduce((s, p) => s + p.amount, 0))}
+            ${T('label_total_received')}: ${C(sorted.reduce((s, p) => s + p.amount, 0), (() => { const cs = [...new Set(debits.map(d => d.currency || 'BRL'))]; return cs.length === 1 ? cs[0] : 'BRL'; })())}
           </div>`
       }
     `;
+    DH.icons.mount();
   }
 
-  return { init, showExtrato };
+  function renderCurrent() { renderDashboard(); }
+
+  return { init, showExtrato, renderCurrent, setFilter, setCustomFrom, setCustomTo };
 })();

@@ -36,6 +36,8 @@ DH.debitos = (() => {
     document.getElementById('debit-description').value = debit.description;
     document.getElementById('debit-date').value        = debit.date;
     document.getElementById('debit-amount').value      = debit.amount;
+    document.getElementById('debit-currency').value    = debit.currency || 'BRL';
+    document.getElementById('debit-category').value    = debit.category || '';
     document.getElementById('debit-type').value        = debit.type;
     clearDebitErrors();
     populateCreditorSelect('debit-creditor', debit.creditorId);
@@ -80,7 +82,7 @@ DH.debitos = (() => {
     debits.forEach(d => {
       const opt = document.createElement('option');
       opt.value = d.id;
-      opt.textContent = d.description + ' — ' + DH.currency.format(d.amount);
+      opt.textContent = d.description + ' — ' + DH.currency.format(d.amount, d.currency);
       if (d.id === selectedId) opt.selected = true;
       sel.appendChild(opt);
     });
@@ -98,18 +100,21 @@ DH.debitos = (() => {
     if (v === 'installment') {
       const amtEl  = document.getElementById('debit-amount');
       const instEl = document.getElementById('debit-installments');
+      const curEl  = document.getElementById('debit-currency');
       const valEl  = document.getElementById('debit-installment-value');
       function recalc() {
         const amt  = parseFloat(amtEl?.value || 0);
         const inst = parseInt(instEl?.value || 1);
         if (amt > 0 && inst > 0 && valEl) {
-          valEl.textContent = DH.currency.format(amt / inst) + ' / parcela';
+          valEl.textContent = DH.currency.format(amt / inst, curEl?.value) + ' / ' + T('installments_label');
         } else if (valEl) { valEl.textContent = ''; }
       }
       amtEl?.removeEventListener('input', recalc);
       instEl?.removeEventListener('input', recalc);
+      curEl?.removeEventListener('change', recalc);
       amtEl?.addEventListener('input', recalc);
       instEl?.addEventListener('input', recalc);
+      curEl?.addEventListener('change', recalc);
       recalc();
     }
   }
@@ -122,6 +127,8 @@ DH.debitos = (() => {
     const description = document.getElementById('debit-description').value.trim();
     const date        = document.getElementById('debit-date').value;
     const amount      = document.getElementById('debit-amount').value;
+    const currency    = document.getElementById('debit-currency').value;
+    const category    = document.getElementById('debit-category').value;
     const type        = document.getElementById('debit-type').value;
     const installments = document.getElementById('debit-installments')?.value || 1;
 
@@ -139,10 +146,10 @@ DH.debitos = (() => {
     const userId = DH.state.currentUser.id;
 
     if (id) {
-      DH.data.debitos.update(id, { creditorId, description, date, amount, type, installments });
+      DH.data.debitos.update(id, { creditorId, description, date, amount, currency, category, type, installments });
       DH.ui.showToast(T('toast_debit_updated'), 'success');
     } else {
-      DH.data.debitos.create(userId, { creditorId, description, date, amount, type, installments });
+      DH.data.debitos.create(userId, { creditorId, description, date, amount, currency, category, type, installments });
       DH.ui.showToast(T('toast_debit_created'), 'success');
     }
 
@@ -153,7 +160,7 @@ DH.debitos = (() => {
 
   /* ── Delete debit ── */
   function deleteDebit(debitId) {
-    DH.ui.confirm(T('credor_delete_confirm').replace('credor', 'débito'), () => {
+    DH.ui.confirm(T('debit_delete_confirm'), () => {
       DH.data.debitos.delete(debitId);
       DH.ui.showToast(T('toast_debit_deleted'), 'info');
       DH.dashboard.renderAll();

@@ -6,19 +6,7 @@
 window.DH = window.DH || {};
 
 DH.auth = (() => {
-  /* ── Toast ── */
-  function toast(msg, type = 'info') {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-    const el = document.createElement('div');
-    el.className = `toast toast-${type}`;
-    el.innerHTML = msg;
-    container.appendChild(el);
-    setTimeout(() => {
-      el.classList.add('removing');
-      el.addEventListener('animationend', () => el.remove());
-    }, 3500);
-  }
+  const toast = (msg, type) => DH.ui.showToast(msg, type);
 
   /* ── Validation ── */
   function validateEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
@@ -71,11 +59,12 @@ DH.auth = (() => {
         if (!inp) return;
         if (inp.type === 'password') {
           inp.type = 'text';
-          btn.textContent = '🙈';
+          btn.setAttribute('data-icon', 'eye-off');
         } else {
           inp.type = 'password';
-          btn.textContent = '👁️';
+          btn.setAttribute('data-icon', 'eye');
         }
+        DH.icons.mount(btn);
       });
     });
   }

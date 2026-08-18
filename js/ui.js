@@ -5,6 +5,8 @@
 window.DH = window.DH || {};
 
 DH.ui = (() => {
+  const TOAST_ICONS = { success: 'check-circle', error: 'alert-circle', warning: 'alert-triangle', info: 'check-circle' };
+
   /* ── Toast ── */
   function showToast(msg, type = 'info') {
     let container = document.getElementById('toast-container');
@@ -15,8 +17,9 @@ DH.ui = (() => {
     }
     const el = document.createElement('div');
     el.className = `toast toast-${type}`;
-    el.innerHTML = msg;
+    el.innerHTML = `<span class="toast-icon" data-icon="${TOAST_ICONS[type] || 'check-circle'}"></span><span>${msg}</span>`;
     container.appendChild(el);
+    DH.icons.mount(el);
     setTimeout(() => {
       el.classList.add('removing');
       el.addEventListener('animationend', () => el.remove(), { once: true });
@@ -85,9 +88,10 @@ DH.ui = (() => {
     localStorage.setItem('dh_theme', theme);
     // Update all toggle buttons
     document.querySelectorAll('.toggle-theme-btn').forEach(btn => {
-      btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+      btn.setAttribute('data-icon', theme === 'dark' ? 'sun' : 'moon');
       btn.title = theme === 'dark' ? 'Modo claro' : 'Modo escuro';
     });
+    DH.icons.mount();
   }
 
   function toggleTheme() {
@@ -104,20 +108,10 @@ DH.ui = (() => {
         // Sync all selectors
         document.querySelectorAll('[data-lang-select]').forEach(s => s.value = sel.value);
         DH.i18n.applyTranslations();
+        DH.icons.mount();
         // Re-render if dashboard is loaded
         if (typeof DH.dashboard !== 'undefined') DH.dashboard.renderAll();
-      });
-    });
-  }
-
-  /* ── Currency selector ── */
-  function initCurrencySelectors() {
-    document.querySelectorAll('[data-currency-select]').forEach(sel => {
-      sel.value = DH.state.currency || 'BRL';
-      sel.addEventListener('change', () => {
-        DH.currency.setCurrency(sel.value);
-        document.querySelectorAll('[data-currency-select]').forEach(s => s.value = sel.value);
-        if (typeof DH.dashboard !== 'undefined') DH.dashboard.renderAll();
+        if (typeof DH.credorView !== 'undefined') DH.credorView.init();
       });
     });
   }
@@ -192,12 +186,12 @@ DH.ui = (() => {
     return (name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
   }
 
-  /* ── Empty state HTML ── */
+  /* ── Empty state HTML (icon = icon name) ── */
   function emptyState(icon, titleKey, subKey) {
     const t = DH.i18n.t;
     return `
       <div class="empty-state">
-        <div class="empty-icon">${icon}</div>
+        <div class="empty-icon" data-icon="${icon}"></div>
         <h3>${t(titleKey)}</h3>
         <p>${t(subKey)}</p>
       </div>`;
@@ -205,25 +199,25 @@ DH.ui = (() => {
 
   /* ── Format date display ── */
   function fmtDate(iso) { return DH.dates.formatDate(iso); }
-  function fmtCurr(v)   { return DH.currency.format(v); }
+  function fmtCurr(v, currency)   { return DH.currency.format(v, currency); }
 
-  /* ── Status badge HTML ── */
+  /* ── Status badge HTML (colored dot + label) ── */
   function statusBadge(status) {
     const t = DH.i18n.t;
     const map = {
-      active:  ['badge-active',  '🟢', 'debit_status_active'],
-      paid:    ['badge-paid',    '✅', 'debit_status_paid'],
-      partial: ['badge-partial', '🟡', 'debit_status_partial'],
+      active:  ['badge-active',  'debit_status_active'],
+      paid:    ['badge-paid',    'debit_status_paid'],
+      partial: ['badge-partial', 'debit_status_partial'],
     };
-    const [cls, icon, key] = map[status] || map.active;
-    return `<span class="badge ${cls}">${icon} ${t(key)}</span>`;
+    const [cls, key] = map[status] || map.active;
+    return `<span class="badge ${cls}"><span class="badge-dot"></span>${t(key)}</span>`;
   }
 
   /* ── Debit type chip ── */
   function typeChip(type, installments) {
     const t = DH.i18n.t;
-    if (type === 'recurring')    return `<span class="chip">🔄 ${t('recurring_label')}</span>`;
-    if (type === 'installment')  return `<span class="chip">📅 ${installments}x</span>`;
+    if (type === 'recurring')    return `<span class="chip"><span data-icon="repeat"></span>${t('recurring_label')}</span>`;
+    if (type === 'installment')  return `<span class="chip"><span data-icon="calendar"></span>${installments}x</span>`;
     return `<span class="chip">1x ${t('unique_label')}</span>`;
   }
 
@@ -234,7 +228,6 @@ DH.ui = (() => {
     confirm, _confirmOk, _confirmCancel,
     initTheme, applyTheme, toggleTheme,
     initLanguageSelectors,
-    initCurrencySelectors,
     initMobileSidebar,
     initModalClosers,
     initUserDropdown,

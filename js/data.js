@@ -7,7 +7,6 @@ window.DH = window.DH || {};
 DH.state = {
   currentUser: null,
   language: 'pt',
-  currency: 'BRL',
   theme: 'dark',
 };
 
@@ -49,6 +48,23 @@ DH.data = (() => {
   function verifyPassword(pwd, encoded) {
     return encodePassword(pwd) === encoded;
   }
+
+  /* ── Self-contained share-link encoding (URL-safe base64 of JSON) ── */
+  const share = {
+    encode(obj) {
+      const json = JSON.stringify(obj);
+      return btoa(unescape(encodeURIComponent(json)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    },
+    decode(str) {
+      try {
+        let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+        while (b64.length % 4) b64 += '=';
+        const json = decodeURIComponent(escape(atob(b64)));
+        return JSON.parse(json);
+      } catch { return null; }
+    },
+  };
 
   /* ── Storage helpers ── */
   function load(key) {
@@ -192,6 +208,35 @@ DH.data = (() => {
       save(KEYS.debitos, allD);
       save(KEYS.pagamentos, allP);
     },
+
+    /* Self-contained snapshot for the public share link (works for anyone, any device) */
+    snapshotFor(creditorId) {
+      const credor = this.getById(creditorId);
+      if (!credor) return null;
+      const debtor = users.getById(credor.userId);
+      const allDebits = load(KEYS.debitos).filter(d => d.creditorId === creditorId);
+      const debitIds = new Set(allDebits.map(d => d.id));
+      const allPayments = load(KEYS.pagamentos).filter(p => debitIds.has(p.debitId));
+      return {
+        v: 1,
+        credor: { name: credor.name, city: credor.city, state: credor.state, phone: credor.phone },
+        debtor: { name: debtor ? debtor.name : '' },
+        debits: allDebits.map(d => ({
+          id: d.id, description: d.description, date: d.date, amount: d.amount,
+          currency: d.currency || 'BRL', category: d.category || '',
+          type: d.type, installments: d.installments, installmentAmount: d.installmentAmount, status: d.status,
+        })),
+        payments: allPayments.map(p => ({ id: p.id, debitId: p.debitId, amount: p.amount, date: p.date, note: p.note || '' })),
+      };
+    },
+
+    buildShareLink(creditorId) {
+      const snap = this.snapshotFor(creditorId);
+      if (!snap) return null;
+      const encoded = share.encode(snap);
+      const base = window.location.origin + window.location.pathname.replace('dashboard.html', '');
+      return `${base}credor.html#d=${encoded}`;
+    },
   };
 
   /* ══════════════════════════════
@@ -207,7 +252,7 @@ DH.data = (() => {
       return load(KEYS.debitos).filter(d => d.creditorId === creditorId && (userId ? d.userId === userId : true));
     },
 
-    create(userId, { creditorId, description, date, amount, type, installments }) {
+    create(userId, { creditorId, description, date, amount, type, installments, currency, category }) {
       const all = load(KEYS.debitos);
       amount = parseFloat(amount);
       installments = parseInt(installments) || 1;
@@ -218,6 +263,8 @@ DH.data = (() => {
         description: description.trim(),
         date,
         amount,
+        currency: currency || 'BRL',
+        category: category || '',
         type, // 'unique' | 'installment' | 'recurring'
         installments: type === 'installment' ? installments : (type === 'recurring' ? 0 : 1),
         installmentAmount,
@@ -241,6 +288,8 @@ DH.data = (() => {
         description: fields.description.trim(),
         date: fields.date,
         amount,
+        currency: fields.currency || 'BRL',
+        category: fields.category || '',
         type: fields.type,
         installments: fields.type === 'installment' ? installments : (fields.type === 'recurring' ? 0 : 1),
         installmentAmount,
@@ -336,6 +385,18 @@ DH.data = (() => {
     },
   };
 
+  /* If every debit shares one currency, use it for aggregate display; otherwise fall back to BRL. */
+  function dominantCurrency(debits) {
+    const codes = [...new Set(debits.map(d => d.currency || 'BRL'))];
+    return codes.length === 1 ? codes[0] : 'BRL';
+  }
+
+  /* Parse a 'YYYY-MM-DD' date string as local midnight (not UTC), so range
+     comparisons don't shift a day off near timezone boundaries. */
+  function localDate(dateStr) {
+    return new Date(dateStr + (String(dateStr).includes('T') ? '' : 'T00:00:00'));
+  }
+
   /* ══════════════════════════════
      ANALYTICS / SUMMARY
   ══════════════════════════════ */
@@ -345,9 +406,9 @@ DH.data = (() => {
       const ds = debitos.getAll(userId);
       const ps = pagamentos.getAll(userId);
 
-      const inRange = (d) => {
+      const inRange = (dateStr) => {
         if (!from && !to) return true;
-        const dt = new Date(d);
+        const dt = localDate(dateStr);
         if (from && dt < from) return false;
         if (to   && dt > to)   return false;
         return true;
@@ -364,7 +425,7 @@ DH.data = (() => {
       // This month
       const now = new Date();
       const thisMonthDebits = ds.filter(d => {
-        const dt = new Date(d.date);
+        const dt = localDate(d.date);
         return dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
       });
       const thisMonthAmount = thisMonthDebits.reduce((s, d) => s + d.amount, 0);
@@ -378,6 +439,7 @@ DH.data = (() => {
         activeDebt,
         paidDebt,
         thisMonth: thisMonthAmount,
+        currency: dominantCurrency(filteredDebits),
         creditorCount: creditorIds.length,
         debitCount: filteredDebits.length,
         paymentCount: filteredPayments.length,
@@ -395,16 +457,17 @@ DH.data = (() => {
 
       const now = new Date();
       const thisMonthDebits = ds.filter(d => {
-        const dt = new Date(d.date);
+        const dt = localDate(d.date);
         return dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
       });
       const thisMonthPaid = ps.filter(p => {
-        const dt = new Date(p.date);
+        const dt = localDate(p.date);
         return dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
       });
 
       return {
         totalDebt, totalPaid, balance,
+        currency: dominantCurrency(ds),
         thisMonthDebt: thisMonthDebits.reduce((s, d) => s + d.amount, 0),
         thisMonthPaid: thisMonthPaid.reduce((s, p) => s + p.amount, 0),
         activeDebits:  ds.filter(d => d.status === 'active' || d.status === 'partial'),
@@ -421,16 +484,14 @@ DH.data = (() => {
       return {
         theme:    localStorage.getItem('dh_theme')    || 'dark',
         language: localStorage.getItem('dh_language') || 'pt',
-        currency: localStorage.getItem('dh_currency') || 'BRL',
       };
     },
     setTheme(t)    { localStorage.setItem('dh_theme', t);    DH.state.theme = t; },
     setLanguage(l) { localStorage.setItem('dh_language', l); DH.state.language = l; },
-    setCurrency(c) { localStorage.setItem('dh_currency', c); DH.state.currency = c; },
   };
 
   /* ── Public API ── */
-  return { uuid, toSlug, users, session, credores, debitos, pagamentos, analytics, settings };
+  return { uuid, toSlug, share, users, session, credores, debitos, pagamentos, analytics, settings };
 })();
 
 /* ══════════════════════════════════════════
@@ -444,20 +505,15 @@ DH.currency = (() => {
     GBP: { locale: 'en-GB', currency: 'GBP' },
   };
 
-  function format(amount) {
-    const code = DH.state.currency || 'BRL';
+  function format(amount, currencyCode) {
+    const code = currencyCode || 'BRL';
     const cfg  = configs[code] || configs.BRL;
     return new Intl.NumberFormat(cfg.locale, {
       style: 'currency', currency: cfg.currency, minimumFractionDigits: 2,
     }).format(amount || 0);
   }
 
-  function setCurrency(code) {
-    DH.state.currency = code;
-    DH.data.settings.setCurrency(code);
-  }
-
-  return { format, setCurrency };
+  return { format, list: () => Object.keys(configs) };
 })();
 
 /* ══════════════════════════════════════════
