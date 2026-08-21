@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="DebitHub — Organize tudo o que você deve, registre cada pagamento e compartilhe um extrato transparente com quem você deve. Chega de brigar por causa de dívida.">
+<title>DebitHub — Organize suas dívidas e nunca mais discuta sobre pagamento</title>
+<link rel="stylesheet" href="css/styles.css">
+<link rel="icon" type="image/svg+xml" href="img/favicon.svg">
+
+<style>
+  /* ── Landing-only layout & brand palette (sampled from the DebitHub mark: navy → teal) ── */
+  body.lp {
+    overflow-x: hidden;
+    --lp-navy: #12305f;
+    --accent: #17b78f;
+    --accent-2: #22d6a8;
+    --accent-hover: #149c79;
+    --accent-dim: rgba(23, 183, 143, 0.14);
+    --accent-glow: rgba(23, 183, 143, 0.32);
+    --success: #17b78f;
+    --success-dim: rgba(23, 183, 143, 0.14);
+  }
+
+  .lp-blob { position: absolute; border-radius: 50%; filter: blur(90px); z-index: 0; pointer-events: none; }
+
+  .lp-topbar {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.5rem; background: rgba(10, 13, 18, 0.75); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .lp-section { position: relative; padding: 5rem 1.5rem; z-index: 1; }
+  .lp-container { max-width: 1120px; margin: 0 auto; position: relative; z-index: 1; }
+  .lp-section-alt { background: var(--surface); border-top: 1px solid var(--border-soft); border-bottom: 1px solid var(--border-soft); }
+
+  .lp-eyebrow {
+    display: inline-flex; align-items: center; gap: .5rem;
+    background: linear-gradient(90deg, var(--lp-navy), var(--accent));
+    color: #fff; border: none;
+    padding: .4rem .9rem; border-radius: var(--radius-full); font-size: .78rem; font-weight: 700;
+    letter-spacing: .02em; margin-bottom: 1.25rem;
+  }
+
+  /* Orphan-word safety net on top of manual &nbsp; fixes in the copy.
+     Short subtitle-style blocks use "balance" so every line comes out an even
+     width instead of leaving one short line dangling on its own. */
+  .lp-hero h1, .lp-h2, .lp-cta-banner h2, .lp-hero-sub, .lp-section-head p, .lp-cta-banner p { text-wrap: balance; }
+  .lp-pain-card p, .lp-feature-card p, .lp-step p, .lp-faq p, .lp-price-permonth { text-wrap: pretty; }
+
+  .lp-hero { display: grid; grid-template-columns: 1.05fr .95fr; gap: 3rem; align-items: center; padding-top: 3.5rem; padding-bottom: 4rem; }
+  .lp-hero h1 { font-size: clamp(2rem, 4vw, 2.9rem); line-height: 1.15; letter-spacing: -0.02em; margin-bottom: 1.25rem; }
+  .lp-hero h1 em { font-style: normal; color: var(--accent-2); }
+  .lp-hero-sub { font-size: 1.05rem; color: var(--text-2); max-width: 46ch; margin-bottom: 2rem; }
+  .lp-hero-ctas { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .lp-hero-note { font-size: .8rem; color: var(--text-muted); display: flex; align-items: center; gap: .5rem; }
+  .lp-hero-note [data-icon] { color: var(--accent-2); }
+
+  /* Hero product screenshot (real app), framed like a browser window + brand glow behind it */
+  .hero-shot-wrap { position: relative; }
+  .hero-shot-wrap::before {
+    content: ''; position: absolute; inset: -34px; z-index: -1; border-radius: 44px;
+    background: linear-gradient(135deg, var(--lp-navy), var(--accent));
+    filter: blur(54px); opacity: .38;
+  }
+  .hero-shot { position: relative; z-index: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); overflow: hidden; }
+  .hero-shot-bar { display: flex; align-items: center; gap: .4rem; padding: .7rem 1rem; background: var(--surface-2); border-bottom: 1px solid var(--border-soft); }
+  .hero-shot-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--surface-4); }
+  .hero-shot-url { margin-left: .75rem; font-size: .72rem; color: var(--text-muted); background: var(--surface-3); padding: .2rem .6rem; border-radius: var(--radius-full); }
+  .hero-shot img { display: block; width: 100%; height: auto; }
+
+  .lp-h2 { font-size: clamp(1.5rem, 3vw, 2.1rem); letter-spacing: -0.01em; margin-bottom: .75rem; }
+  .lp-section-head { text-align: center; max-width: 620px; margin: 0 auto 3rem; }
+  .lp-section-head p { color: var(--text-2); font-size: 1rem; }
+
+  .lp-pain-grid, .lp-features-grid, .lp-steps-grid, .lp-pricing-grid { display: grid; gap: 1.25rem; }
+  .lp-pain-grid { grid-template-columns: repeat(2, 1fr); }
+  .lp-features-grid { grid-template-columns: repeat(2, 1fr); }
+  .lp-steps-grid { grid-template-columns: repeat(3, 1fr); }
+
+  .lp-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); padding: 1.5rem; }
+
+  /* Pain section — stronger contrast + a distinct icon per topic */
+  .lp-pain-card {
+    display: flex; gap: 1.1rem; align-items: flex-start;
+    background: linear-gradient(160deg, var(--warning-dim), var(--surface) 65%);
+    border: 1px solid var(--border); border-left: 3px solid var(--warning);
+  }
+  .lp-pain-card [data-icon] {
+    color: #fff; background: var(--warning); width: 48px; height: 48px; border-radius: var(--radius);
+    flex-shrink: 0; box-shadow: 0 6px 16px rgba(217, 154, 61, .35);
+  }
+  .lp-pain-card p { color: var(--text); font-size: .95rem; font-weight: 500; }
+
+  /* Feature cards — icon + title side by side on one line, description below */
+  .lp-feature-head { display: flex; align-items: center; gap: .9rem; margin-bottom: .85rem; }
+  .lp-feature-card [data-icon] { width: 42px; height: 42px; border-radius: var(--radius); background: var(--accent-dim); color: var(--accent-2); flex-shrink: 0; }
+  .lp-feature-card h3 { font-size: 1.02rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lp-feature-card p { color: var(--text-2); font-size: .88rem; }
+
+  /* Step numbers — solid gradient badges instead of faint background digits */
+  .lp-step-num {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--lp-navy), var(--accent));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; font-weight: 800; margin-bottom: 1.1rem;
+    box-shadow: 0 6px 18px var(--accent-glow);
+  }
+  .lp-step h3 { font-size: 1.05rem; margin-bottom: .5rem; }
+  .lp-step p { color: var(--text-2); font-size: .9rem; }
+
+  .lp-pricing-grid { grid-template-columns: repeat(4, 1fr); align-items: stretch; }
+  .lp-price-card { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-xl); padding: 1.5rem 1.25rem; position: relative; }
+  .lp-price-card.featured { border-color: var(--accent); box-shadow: var(--shadow-glow); background: linear-gradient(165deg, rgba(18, 48, 95, .35), var(--surface) 45%); }
+  .lp-price-badge { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); background: linear-gradient(90deg, var(--lp-navy), var(--accent)); color: #fff; font-size: .72rem; font-weight: 800; padding: .3rem .9rem; border-radius: var(--radius-full); white-space: nowrap; }
+  .lp-price-name { font-size: 1rem; font-weight: 700; color: var(--text-2); margin-bottom: .75rem; }
+  .lp-price-value { font-size: 2.3rem; font-weight: 800; letter-spacing: -0.02em; }
+  .lp-price-value small { font-size: .95rem; font-weight: 600; color: var(--text-muted); }
+  .lp-price-permonth { font-size: .8rem; color: var(--text-muted); margin: .35rem 0 1.25rem; }
+  .lp-price-save { display: inline-block; font-size: .74rem; font-weight: 700; color: var(--accent-2); background: var(--accent-dim); padding: .2rem .6rem; border-radius: var(--radius-full); margin-bottom: 1.25rem; align-self: flex-start; }
+  .lp-price-features { display: flex; flex-direction: column; gap: .6rem; margin-bottom: 1.5rem; flex: 1; }
+  .lp-price-features li { display: flex; gap: .55rem; align-items: flex-start; font-size: .86rem; color: var(--text-2); }
+  .lp-price-features [data-icon] { color: var(--accent-2); flex-shrink: 0; margin-top: .1rem; width: 16px; height: 16px; }
+
+  .lp-faq { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: .75rem; }
+  .lp-faq details { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); padding: 1.1rem 1.35rem; }
+  .lp-faq summary { cursor: pointer; font-weight: 600; font-size: .95rem; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+  .lp-faq summary::-webkit-details-marker { display: none; }
+  .lp-faq summary::after { content: '+'; font-size: 1.4rem; color: var(--accent-2); flex-shrink: 0; transition: transform var(--transition); line-height: 1; }
+  .lp-faq details[open] summary::after { transform: rotate(45deg); }
+  .lp-faq p { color: var(--text-2); font-size: .88rem; margin-top: .85rem; }
+
+  .lp-cta-banner { text-align: center; background: linear-gradient(135deg, var(--accent-dim), rgba(18, 48, 95, .3)); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 3.5rem 2rem; }
+  .lp-cta-banner h2 { margin-bottom: .75rem; }
+  .lp-cta-banner p { color: var(--text-2); max-width: 44ch; margin: 0 auto 2rem; }
+
+  .lp-footer { text-align: center; padding: 3rem 1.5rem 2.5rem; }
+  .lp-footer .brand-logo-full { margin: 0 auto 1rem; justify-content: center; }
+  .lp-footer p { color: var(--text-muted); font-size: .82rem; margin-bottom: .35rem; }
+  .lp-footer a { color: var(--text-2); }
+
+  @media (max-width: 1100px) {
+    .lp-pricing-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 900px) {
+    .lp-hero { grid-template-columns: 1fr; padding-top: 2rem; }
+    .lp-hero-visual { order: -1; }
+    .hero-shot-wrap::before { inset: -18px; }
+    .lp-pain-grid, .lp-features-grid, .lp-steps-grid, .lp-pricing-grid { grid-template-columns: 1fr; }
+    .lp-feature-card h3 { white-space: normal; }
+    .lp-section { padding: 3.5rem 1.25rem; }
+  }
+</style>
+</head>
+<body class="lp">
+
+<!-- Decorative background blobs (brand navy + teal duo) -->
+<div class="lp-blob" style="width:520px;height:520px;top:-120px;right:-160px;background:var(--accent-glow);opacity:.35;"></div>
+<div class="lp-blob" style="width:420px;height:420px;top:600px;left:-180px;background:var(--lp-navy);opacity:.22;"></div>
+<div class="lp-blob" style="width:460px;height:460px;bottom:200px;right:-160px;background:var(--accent-dim);opacity:.8;"></div>
+
+<!-- ═══════════════════════════════════
+     TOP BAR — logo + single CTA, no menu
+═══════════════════════════════════ -->
+<header class="lp-topbar">
+  <div class="brand-logo-full brand-logo-full-sm" role="img" aria-label="DebitHub">
+    <img class="brand-logo-img-light" src="img/logo-debithub-horizontal-claro.png" alt="">
+    <img class="brand-logo-img-dark" src="img/logo-debithub-horizontal-escuro.png" alt="">
+  </div>
+  <a href="index.html#register" class="btn btn-primary btn-sm">Criar minha conta</a>
+</header>
+
+<!-- ═══════════════════════════════════
+     HERO
+═══════════════════════════════════ -->
+<section class="lp-section">
+  <div class="lp-container lp-hero">
+    <div>
+      <span class="lp-eyebrow"><span data-icon="shield"></span> Feito para brasileiros que emprestam e devem no dia a&nbsp;dia</span>
+      <h1>Organize tudo o que você deve — e prove <em>cada pagamento</em> sem&nbsp;discussão</h1>
+      <p class="lp-hero-sub">O DebitHub reúne todos os seus credores, dívidas e pagamentos em um só lugar — e gera um extrato que você compartilha com quem te emprestou dinheiro, sem esquecimento, sem planilha e sem&nbsp;climão.</p>
+      <div class="lp-hero-ctas">
+        <a href="index.html#register" class="btn btn-primary btn-lg">Quero organizar minhas dívidas</a>
+        <a href="#planos" class="btn btn-ghost btn-lg">Ver planos</a>
+      </div>
+      <div class="lp-hero-note"><span data-icon="check-circle"></span> Cadastro em menos de 2&nbsp;minutos</div>
+    </div>
+
+    <div class="lp-hero-visual">
+      <div class="hero-shot-wrap">
+        <div class="hero-shot">
+          <div class="hero-shot-bar">
+            <span class="hero-shot-dot"></span><span class="hero-shot-dot"></span><span class="hero-shot-dot"></span>
+            <span class="hero-shot-url">app.debithub.online</span>
+          </div>
+          <img src="img/tela-usuario-landing-page.png" alt="Painel do DebitHub mostrando débitos ativos, total pago e o progresso de pagamento de cada credor">
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════
+     PAIN / AGITATION
+═══════════════════════════════════ -->
+<section class="lp-section lp-section-alt">
+  <div class="lp-container">
+    <div class="lp-section-head">
+      <h2 class="lp-h2">Isso já aconteceu com você?</h2>
+      <p>Dívida informal é assim: começa simples e, sem controle, vira dor de cabeça — e às vezes até&nbsp;briga.</p>
+    </div>
+    <div class="lp-pain-grid">
+      <div class="lp-card lp-pain-card">
+        <span data-icon="users"></span>
+        <p>Emprestou dinheiro de um parente ou amigo e já perdeu a conta de quanto já&nbsp;devolveu?</p>
+      </div>
+      <div class="lp-card lp-pain-card">
+        <span data-icon="alert-triangle"></span>
+        <p>Já discutiu porque tinha certeza que já tinha pago uma parcela, mas não tinha como&nbsp;provar?</p>
+      </div>
+      <div class="lp-card lp-pain-card">
+        <span data-icon="file-text"></span>
+        <p>Tem uma lista mental — ou um monte de papelzinho — com tudo o que deve, e nunca sabe o total&nbsp;real?</p>
+      </div>
+      <div class="lp-card lp-pain-card">
+        <span data-icon="credit-card"></span>
+        <p>Fica sem jeito de pedir (ou de mandar) um comprovante organizado pra quem te emprestou&nbsp;dinheiro?</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════
+     SOLUTION / FEATURES
+═══════════════════════════════════ -->
+<section class="lp-section" id="recursos">
+  <div class="lp-container">
+    <div class="lp-section-head">
+      <span class="lp-eyebrow"><span data-icon="wallet"></span> A&nbsp;solução</span>
+      <h2 class="lp-h2">Tudo o que você deve, em um painel só — sem planilha, sem&nbsp;enrolação</h2>
+      <p>O DebitHub foi criado para quem tem mais de uma dívida rolando ao mesmo tempo e quer clareza, sem depender da&nbsp;memória.</p>
+    </div>
+
+    <div class="lp-features-grid">
+      <div class="lp-card lp-feature-card">
+        <div class="lp-feature-head">
+          <span data-icon="users"></span>
+          <h3>Todos os seus credores em um só lugar</h3>
+        </div>
+        <p>Família, amigos, lojas ou prestadores de serviço — cadastre quem você deve e acompanhe cada um&nbsp;separadamente.</p>
+      </div>
+      <div class="lp-card lp-feature-card">
+        <div class="lp-feature-head">
+          <span data-icon="list"></span>
+          <h3>Dívidas únicas, parceladas ou recorrentes</h3>
+        </div>
+        <p>Registre do jeito que a dívida realmente é — e o DebitHub calcula parcelas e saldo&nbsp;automaticamente.</p>
+      </div>
+      <div class="lp-card lp-feature-card">
+        <div class="lp-feature-head">
+          <span data-icon="dollar-sign"></span>
+          <h3>Pagamentos parciais sempre visíveis</h3>
+        </div>
+        <p>Pagou uma parte? Registre. O sistema mostra na hora quanto já foi pago e quanto ainda&nbsp;falta.</p>
+      </div>
+      <div class="lp-card lp-feature-card">
+        <div class="lp-feature-head">
+          <span data-icon="link"></span>
+          <h3>Extrato compartilhável, sem login</h3>
+        </div>
+        <p>Gere um link do seu histórico de pagamentos com aquele credor — a pessoa só abre e vê, sem precisar criar&nbsp;conta.</p>
+      </div>
+      <div class="lp-card lp-feature-card">
+        <div class="lp-feature-head">
+          <span data-icon="tag"></span>
+          <h3>Categorias para organizar seus gastos</h3>
+        </div>
+        <p>Moradia, saúde, transporte, investimento e mais — entenda para onde suas dívidas estão&nbsp;indo.</p>
+      </div>
+      <div class="lp-card lp-feature-card">
+        <div class="lp-feature-head">
+          <span data-icon="globe"></span>
+          <h3>Real, Dólar ou Euro</h3>
+        </div>
+        <p>Tem dívida em outra moeda? Sem problema — o DebitHub trabalha com R$, US$ e&nbsp;€.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════
+     HOW IT WORKS
+═══════════════════════════════════ -->
+<section class="lp-section lp-section-alt">
+  <div class="lp-container">
+    <div class="lp-section-head">
+      <h2 class="lp-h2">Como funciona</h2>
+      <p>Três passos e você já está com tudo&nbsp;organizado.</p>
+    </div>
+    <div class="lp-steps-grid">
+      <div class="lp-step">
+        <div class="lp-step-num">1</div>
+        <h3>Crie sua conta</h3>
+        <p>Escolha o plano que faz sentido pra você e ative seu acesso em&nbsp;minutos.</p>
+      </div>
+      <div class="lp-step">
+        <div class="lp-step-num">2</div>
+        <h3>Cadastre credores e dívidas</h3>
+        <p>Adicione quem você deve e o que deve — únicas, parceladas ou&nbsp;recorrentes.</p>
+      </div>
+      <div class="lp-step">
+        <div class="lp-step-num">3</div>
+        <h3>Registre pagamentos e compartilhe</h3>
+        <p>Cada pagamento fica salvo. Quando quiser, envie o extrato pro seu&nbsp;credor.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════
+     PRICING
+═══════════════════════════════════ -->
+<section class="lp-section" id="planos">
+  <div class="lp-container">
+    <div class="lp-section-head">
+      <span class="lp-eyebrow"><span data-icon="tag"></span> Planos</span>
+      <h2 class="lp-h2">Escolha o plano ideal pra você</h2>
+      <p>Sem taxa de adesão, sem letras miúdas. Mude de plano quando quiser, direto na sua&nbsp;conta.</p>
+    </div>
+
+    <div class="lp-pricing-grid">
+      <div class="lp-price-card">
+        <div class="lp-price-name">Mensal</div>
+        <div class="lp-price-value">R$ 29</div>
+        <div class="lp-price-permonth">Cobrado por&nbsp;mês</div>
+        <ul class="lp-price-features">
+          <li><span data-icon="check-circle"></span> Credores e dívidas ilimitados</li>
+          <li><span data-icon="check-circle"></span> Extrato compartilhável</li>
+          <li><span data-icon="check-circle"></span> Suporte por e-mail</li>
+        </ul>
+        <a href="index.html?plan=mensal#register" class="btn btn-ghost w-full">Assinar Mensal</a>
+      </div>
+
+      <div class="lp-price-card">
+        <div class="lp-price-name">Trimestral</div>
+        <div class="lp-price-value">R$ 81</div>
+        <div class="lp-price-permonth">Equivalente a R$&nbsp;27/mês</div>
+        <span class="lp-price-save">Economize 7% no&nbsp;trimestre</span>
+        <ul class="lp-price-features">
+          <li><span data-icon="check-circle"></span> Credores e dívidas ilimitados</li>
+          <li><span data-icon="check-circle"></span> Extrato compartilhável</li>
+          <li><span data-icon="check-circle"></span> Suporte por e-mail</li>
+        </ul>
+        <a href="index.html?plan=trimestral#register" class="btn btn-ghost w-full">Assinar Trimestral</a>
+      </div>
+
+      <div class="lp-price-card">
+        <div class="lp-price-name">Semestral</div>
+        <div class="lp-price-value">R$ 157</div>
+        <div class="lp-price-permonth">Equivalente a R$&nbsp;26,17/mês</div>
+        <span class="lp-price-save">Economize 10% no&nbsp;período</span>
+        <ul class="lp-price-features">
+          <li><span data-icon="check-circle"></span> Credores e dívidas ilimitados</li>
+          <li><span data-icon="check-circle"></span> Extrato compartilhável</li>
+          <li><span data-icon="check-circle"></span> Suporte por e-mail</li>
+        </ul>
+        <a href="index.html?plan=semestral#register" class="btn btn-ghost w-full">Assinar Semestral</a>
+      </div>
+
+      <div class="lp-price-card featured">
+        <span class="lp-price-badge">Melhor custo-benefício</span>
+        <div class="lp-price-name">Anual</div>
+        <div class="lp-price-value">R$ 299</div>
+        <div class="lp-price-permonth">Equivalente a R$&nbsp;24,92/mês</div>
+        <span class="lp-price-save">Economize 14% no&nbsp;ano</span>
+        <ul class="lp-price-features">
+          <li><span data-icon="check-circle"></span> Credores e dívidas ilimitados</li>
+          <li><span data-icon="check-circle"></span> Extrato compartilhável</li>
+          <li><span data-icon="check-circle"></span> Suporte prioritário</li>
+          <li><span data-icon="check-circle"></span> Melhor preço por mês</li>
+        </ul>
+        <a href="index.html?plan=anual#register" class="btn btn-primary w-full">Assinar Anual</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════
+     FAQ
+═══════════════════════════════════ -->
+<section class="lp-section lp-section-alt">
+  <div class="lp-container">
+    <div class="lp-section-head">
+      <h2 class="lp-h2">Perguntas frequentes</h2>
+    </div>
+    <div class="lp-faq">
+      <details>
+        <summary>Preciso ter conhecimento técnico ou usar planilhas?</summary>
+        <p>Não. O DebitHub foi criado para qualquer pessoa usar, direto do navegador — sem planilha, sem instalar&nbsp;nada.</p>
+      </details>
+      <details>
+        <summary>Meus dados ficam seguros?</summary>
+        <p>Sim. Suas senhas e o conteúdo que você cadastra (nomes de credores, valores, descrições) nunca ficam visíveis para ninguém além de você — nem para a administração da&nbsp;plataforma.</p>
+      </details>
+      <details>
+        <summary>O credor precisa criar uma conta para ver o extrato?</summary>
+        <p>Não. Você gera um link e compartilha por WhatsApp, e-mail ou onde preferir — a pessoa só abre e vê, sem&nbsp;cadastro.</p>
+      </details>
+      <details>
+        <summary>Funciona pelo celular?</summary>
+        <p>Sim. O DebitHub funciona direto do navegador do seu celular, tablet ou computador, sem precisar instalar&nbsp;aplicativo.</p>
+      </details>
+      <details>
+        <summary>Posso trocar de plano depois?</summary>
+        <p>Sim. Você pode alterar seu plano a qualquer momento direto na sua conta, em&nbsp;Configurações.</p>
+      </details>
+      <details>
+        <summary>Posso cancelar quando quiser?</summary>
+        <p>Sim. Você pode cancelar a qualquer momento, sem multa e sem burocracia — não obrigamos ninguém a ficar. É só entrar em contato pelo nosso e-mail de&nbsp;suporte.</p>
+      </details>
+      <details>
+        <summary>Como funciona o pagamento da assinatura?</summary>
+        <p>No cadastro você escolhe o plano e a forma de pagamento (Pix, cartão ou boleto). Qualquer dúvida, é só falar com a gente pelo e-mail de&nbsp;contato.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════
+     FINAL CTA
+═══════════════════════════════════ -->
+<section class="lp-section">
+  <div class="lp-container">
+    <div class="lp-cta-banner">
+      <h2 class="lp-h2">Chega de perder o controle de quem você&nbsp;deve</h2>
+      <p>Em minutos, organize suas dívidas e pagamentos — sem mais discutir quem já pagou o&nbsp;quê.</p>
+      <a href="index.html#register" class="btn btn-primary btn-lg">Quero organizar minhas dívidas agora</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════
+     FOOTER (no nav — contact only)
+═══════════════════════════════════ -->
+<footer class="lp-footer">
+  <div class="brand-logo-full brand-logo-full-sm" role="img" aria-label="DebitHub">
+    <img class="brand-logo-img-light" src="img/logo-debithub-horizontal-claro.png" alt="">
+    <img class="brand-logo-img-dark" src="img/logo-debithub-horizontal-escuro.png" alt="">
+  </div>
+  <p>Dúvidas ou mais informações: <a href="mailto:contato@debithub.online">contato@debithub.online</a></p>
+  <p>Desenvolvido por <a href="https://onpublimarketing.com.br" target="_blank" rel="noopener">Onpubli&nbsp;Marketing</a></p>
+</footer>
+
+<script src="js/icons.js"></script>
+<script>DH.icons.mount();</script>
+</body>
+</html>

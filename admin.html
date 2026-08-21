@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="DebitHub — Painel do administrador.">
+  <title>Admin — DebitHub</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
+</head>
+<body>
+
+<div id="toast-container"></div>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<!-- ═══════════════════════════════════════
+     HEADER
+═══════════════════════════════════════ -->
+<header class="app-header">
+  <button class="btn-icon" id="hamburger-btn" style="display:none;" title="Menu" data-icon="menu"></button>
+
+  <a href="admin.html" class="header-brand">
+    <div class="brand-logo-full brand-logo-full-sm" role="img" aria-label="DebitHub">
+      <img class="brand-logo-img-light" src="img/logo-debithub-horizontal-claro.png" alt="">
+      <img class="brand-logo-img-dark" src="img/logo-debithub-horizontal-escuro.png" alt="">
+    </div>
+  </a>
+
+  <span class="chip" style="margin-left:.5rem;"><span data-icon="shield"></span> <span data-i18n="admin_badge">Administrador</span></span>
+
+  <div class="header-spacer"></div>
+
+  <div class="header-controls">
+    <select class="toolbar-select" data-lang-select style="font-size:.78rem;">
+      <option value="pt">PT</option>
+      <option value="en">EN</option>
+    </select>
+    <button class="toggle-theme-btn" onclick="DH.ui.toggleTheme()" title="Alternar tema" data-icon="sun"></button>
+
+    <div class="header-user">
+      <div class="user-avatar" id="user-avatar-btn" title="Minha conta">?</div>
+    </div>
+  </div>
+</header>
+
+<!-- User Dropdown -->
+<div class="user-dropdown" id="user-dropdown">
+  <div class="user-dropdown-header">
+    <div class="user-dropdown-name" id="dropdown-user-name">—</div>
+    <div class="user-dropdown-email" id="dropdown-user-email">—</div>
+  </div>
+  <div class="user-dropdown-divider"></div>
+  <button class="dropdown-item" onclick="DH.admin.showView('settings');document.getElementById('user-dropdown').classList.remove('open')">
+    <span data-icon="settings"></span> <span data-i18n="nav_settings">Configurações</span>
+  </button>
+  <div class="user-dropdown-divider"></div>
+  <button class="dropdown-item danger" onclick="DH.app.logout()">
+    <span data-icon="log-out"></span> <span data-i18n="nav_logout">Sair</span>
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════ -->
+<aside class="app-sidebar" id="app-sidebar">
+  <span class="nav-section-label">Menu</span>
+
+  <button class="nav-item active" data-view="overview">
+    <span class="nav-icon" data-icon="bar-chart-2"></span>
+    <span data-i18n="admin_nav_overview">Visão Geral</span>
+  </button>
+  <button class="nav-item" data-view="accounts">
+    <span class="nav-icon" data-icon="users"></span>
+    <span data-i18n="admin_nav_accounts">Contas</span>
+  </button>
+  <button class="nav-item" data-view="billing">
+    <span class="nav-icon" data-icon="credit-card"></span>
+    <span data-i18n="admin_nav_billing">Pagamentos</span>
+  </button>
+  <button class="nav-item" data-view="plans">
+    <span class="nav-icon" data-icon="tag"></span>
+    <span data-i18n="admin_nav_plans">Planos</span>
+  </button>
+
+  <div class="divider"></div>
+
+  <button class="nav-item" data-view="settings">
+    <span class="nav-icon" data-icon="settings"></span>
+    <span data-i18n="nav_settings">Configurações</span>
+  </button>
+  <button class="nav-item" onclick="DH.app.logout()" style="color:var(--danger);">
+    <span class="nav-icon" data-icon="log-out"></span>
+    <span data-i18n="nav_logout">Sair</span>
+  </button>
+
+  <!-- Footer in sidebar -->
+  <div class="app-footer" style="padding:.75rem;margin-top:auto;text-align:center;">
+    <div data-i18n="developed_by">Desenvolvido por</div>
+    <a href="https://onpublimarketing.com.br" target="_blank" rel="noopener">Onpubli Marketing</a>
+  </div>
+</aside>
+
+<!-- ═══════════════════════════════════════
+     MAIN CONTENT
+═══════════════════════════════════════ -->
+<main class="app-main" id="main-content">
+  <div style="display:flex;align-items:center;justify-content:center;height:200px;">
+    <div class="spinner"></div>
+  </div>
+</main>
+
+<!-- ═══════════════════════════════════════
+     MODAL — REGISTER SUBSCRIPTION PAYMENT
+═══════════════════════════════════════ -->
+<div class="modal-overlay" id="billing-modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="billing-modal-title"><span data-icon="credit-card"></span> <span data-i18n="admin_modal_mark_paid">Registrar pagamento</span></h2>
+      <button class="modal-close" onclick="DH.ui.closeModal('billing-modal-overlay')" data-icon="x"></button>
+    </div>
+    <form id="billing-form" novalidate>
+      <input type="hidden" id="billing-id">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" data-i18n="admin_col_user">Usuário</label>
+          <select class="form-select" id="billing-user">
+            <option value="">—</option>
+          </select>
+          <span class="form-error hidden" id="billing-user-error"></span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="admin_col_method">Forma de pagamento</label>
+          <select class="form-select" id="billing-method">
+            <option value="pix" data-i18n="method_pix">Pix</option>
+            <option value="card" data-i18n="method_card">Cartão de crédito/débito</option>
+            <option value="boleto" data-i18n="method_boleto">Boleto bancário</option>
+            <option value="bonus" data-i18n="method_bonus">Bônus</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="admin_col_plan">Plano</label>
+          <select class="form-select" id="billing-plan">
+            <option value="">—</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+          <div class="form-group">
+            <label class="form-label" data-i18n="payment_amount">Valor pago</label>
+            <input type="text" class="form-input" id="billing-amount" data-money-field placeholder="0,00">
+            <span class="form-error hidden" id="billing-amount-error"></span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="payment_date">Data</label>
+            <input type="text" class="form-input" id="billing-date" data-date-field>
+            <span class="form-error hidden" id="billing-date-error"></span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="payment_note">Observação (opcional)</label>
+          <input type="text" class="form-input" id="billing-note">
+        </div>
+        <label class="switch">
+          <input type="checkbox" class="switch-input" id="billing-activate" checked>
+          <span class="switch-track"></span>
+          <span class="switch-label" data-i18n="admin_billing_activate_checkbox">Ativar conta ao salvar</span>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="DH.ui.closeModal('billing-modal-overlay')" data-i18n="btn_cancel">Cancelar</button>
+        <button type="submit" class="btn btn-success" data-i18n="btn_save">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MODAL — PAYMENT HISTORY
+═══════════════════════════════════════ -->
+<div class="modal-overlay modal-lg" id="billing-history-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="billing-history-title"><span data-icon="file-text"></span> <span data-i18n="admin_history_title">Histórico de pagamentos</span></h2>
+      <button class="modal-close" onclick="DH.ui.closeModal('billing-history-modal')" data-icon="x"></button>
+    </div>
+    <div class="modal-body" id="billing-history-body"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MODAL — NEW / EDIT PLAN
+═══════════════════════════════════════ -->
+<div class="modal-overlay" id="plan-modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="plan-modal-title"><span data-icon="tag"></span> <span data-i18n="admin_modal_new_plan">Novo plano</span></h2>
+      <button class="modal-close" onclick="DH.ui.closeModal('plan-modal-overlay')" data-icon="x"></button>
+    </div>
+    <form id="plan-form" novalidate>
+      <input type="hidden" id="plan-id">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" data-i18n="field_plan_name">Nome do plano</label>
+          <input type="text" class="form-input" id="plan-name" placeholder="Ex: Mensal">
+          <span class="form-error hidden" id="plan-name-error"></span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;">
+          <div class="form-group">
+            <label class="form-label" data-i18n="field_plan_price_brl">Valor em Real (R$)</label>
+            <input type="text" class="form-input" id="plan-price-brl" data-money-field placeholder="0,00">
+            <span class="form-error hidden" id="plan-price-brl-error"></span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="field_plan_price_usd">Valor em Dólar (US$)</label>
+            <input type="text" class="form-input" id="plan-price-usd" data-money-field placeholder="0,00">
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="field_plan_price_eur">Valor em Euro (€)</label>
+            <input type="text" class="form-input" id="plan-price-eur" data-money-field placeholder="0,00">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="field_plan_period">Período</label>
+          <select class="form-select" id="plan-period">
+            <option value="monthly" data-i18n="period_option_monthly">Mensal</option>
+            <option value="quarterly" data-i18n="period_option_quarterly">Trimestral</option>
+            <option value="semiannual" data-i18n="period_option_semiannual">Semestral</option>
+            <option value="annual" data-i18n="period_option_annual">Anual</option>
+            <option value="unlimited" data-i18n="period_option_unlimited">Indeterminado</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="DH.ui.closeModal('plan-modal-overlay')" data-i18n="btn_cancel">Cancelar</button>
+        <button type="submit" class="btn btn-primary" data-i18n="btn_save">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MODAL — EDIT ACCOUNT (admin)
+═══════════════════════════════════════ -->
+<div class="modal-overlay" id="account-modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title"><span data-icon="user"></span> <span data-i18n="admin_modal_edit_account">Editar conta</span></h2>
+      <button class="modal-close" onclick="DH.ui.closeModal('account-modal-overlay')" data-icon="x"></button>
+    </div>
+    <form id="account-form" novalidate>
+      <input type="hidden" id="account-id">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" data-i18n="field_name">Nome completo</label>
+          <input type="text" class="form-input" id="account-name">
+          <span class="form-error hidden" id="account-name-error"></span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+          <div class="form-group">
+            <label class="form-label" data-i18n="field_phone">Telefone</label>
+            <input type="tel" class="form-input" id="account-phone">
+          </div>
+          <div class="form-group">
+            <label class="form-label" id="account-cpf-label" data-i18n="field_cpf">CPF</label>
+            <input type="text" class="form-input" id="account-cpf">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="field_country">País</label>
+          <select class="form-select" id="account-country"></select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:.75rem;">
+          <div class="form-group">
+            <label class="form-label" data-i18n="credor_city">Cidade</label>
+            <input type="text" class="form-input" id="account-city" list="city-datalist">
+          </div>
+          <div class="form-group" id="account-state-wrap" style="width:170px;">
+            <label class="form-label" data-i18n="credor_state">Estado</label>
+            <select class="form-select" id="account-state"></select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+          <div class="form-group">
+            <label class="form-label" data-i18n="field_plan">Plano</label>
+            <select class="form-select" id="account-plan">
+              <option value="">—</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="field_currency">Moeda</label>
+            <select class="form-select" id="account-currency">
+              <option value="BRL" data-i18n="opt_currency_brl">R$ Real</option>
+              <option value="USD" data-i18n="opt_currency_usd">$ Dólar</option>
+              <option value="EUR" data-i18n="opt_currency_eur">€ Euro</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="field_payment_method">Forma de pagamento</label>
+          <select class="form-select" id="account-payment-method">
+            <option value="pix" data-i18n="method_pix">Pix</option>
+            <option value="card" data-i18n="method_card">Cartão de crédito/débito</option>
+            <option value="boleto" data-i18n="method_boleto">Boleto bancário</option>
+            <option value="bonus" data-i18n="method_bonus">Bônus</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="DH.ui.closeModal('account-modal-overlay')" data-i18n="btn_cancel">Cancelar</button>
+        <button type="submit" class="btn btn-primary" data-i18n="btn_save">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<datalist id="city-datalist"></datalist>
+
+<!-- ═══════════════════════════════════════
+     MODAL — CONFIRM DELETE
+═══════════════════════════════════════ -->
+<div class="modal-overlay modal-sm" id="confirm-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title"><span data-icon="alert-triangle"></span> <span data-i18n="modal_confirm_delete">Confirmar exclusão</span></h2>
+      <button class="modal-close" id="confirm-close" onclick="DH.ui.closeModal('confirm-modal')" data-icon="x"></button>
+    </div>
+    <div class="modal-body">
+      <p class="text-small" id="confirm-message"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="confirm-cancel" onclick="DH.ui._confirmCancel()" data-i18n="btn_cancel">Cancelar</button>
+      <button class="btn btn-danger" id="confirm-ok" onclick="DH.ui._confirmOk()" data-i18n="btn_delete">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════════ -->
+<script src="js/icons.js"></script>
+<script src="js/date-field.js"></script>
+<script src="js/money-field.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/admin.js"></script>
+
+<script>
+window.DH = window.DH || {};
+DH.app = {
+  logout() {
+    DH.data.session.clear();
+    window.location.href = 'index.html';
+  }
+};
+
+(function() {
+  // Auth guard — admin only
+  const session = DH.data.session.get();
+  if (!session) { window.location.href = 'index.html'; return; }
+  if (session.role !== 'admin') { window.location.href = 'dashboard.html'; return; }
+  DH.state.currentUser = session;
+
+  const s = DH.data.settings.get();
+  DH.state.theme    = s.theme;
+  DH.state.language = s.language;
+
+  DH.ui.initTheme();
+  DH.i18n.init();
+  DH.i18n.applyTranslations();
+  DH.icons.mount();
+
+  DH.ui.initLanguageSelectors();
+  DH.ui.initMobileSidebar();
+  DH.ui.initModalClosers();
+  DH.ui.initUserDropdown();
+  DH.ui.initSidebarNav();
+  DH.auth.initDashboard(); // wires up the change-password form + eye toggles (used by Settings view)
+
+  document.querySelectorAll('[data-lang-select]').forEach(el => el.value = s.language);
+
+  document.getElementById('user-avatar-btn').textContent = DH.ui.getInitials(session.name);
+  document.getElementById('dropdown-user-name').textContent = session.name;
+  document.getElementById('dropdown-user-email').textContent = session.email;
+
+  if (window.innerWidth < 900) {
+    const h = document.getElementById('hamburger-btn');
+    if (h) h.style.display = '';
+  }
+  window.addEventListener('resize', () => {
+    const h = document.getElementById('hamburger-btn');
+    if (h) h.style.display = window.innerWidth < 900 ? '' : 'none';
+  });
+
+  DH.admin.init();
+  DH.admin.renderAll();
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') DH.ui.closeAllModals();
+  });
+})();
+</script>
+</body>
+</html>

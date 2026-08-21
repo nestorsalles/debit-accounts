@@ -1,0 +1,9 @@
+{
+  "name": "debithub",
+  "private": true,
+  "version": "1.0.0",
+  "description": "DebitHub — local preview server (static site, no build step).",
+  "scripts": {
+    "start": "npx --yes http-server -c-1 -o -p 5500"
+  }
+}

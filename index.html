@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="DebitHub — Controle inteligente de débitos pessoais. Gerencie suas dívidas e pagamentos de forma simples e organizada.">
+  <title>Entrar — DebitHub</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" type="image/svg+xml" href="img/favicon.svg">
+</head>
+<body>
+
+<div id="toast-container"></div>
+<datalist id="city-datalist"></datalist>
+
+<div class="login-page">
+  <div class="login-bg"></div>
+
+  <div class="login-container">
+
+    <!-- Brand -->
+    <div class="login-brand animate-up">
+      <div class="brand-logo-full brand-logo-full-lg" role="img" aria-label="DebitHub">
+        <img class="brand-logo-img-light" src="img/logo-debithub-horizontal-claro.png" alt="">
+        <img class="brand-logo-img-dark" src="img/logo-debithub-horizontal-escuro.png" alt="">
+      </div>
+      <p id="brand-tagline">Controle inteligente de débitos pessoais</p>
+    </div>
+
+    <!-- Toolbar: Language, Theme -->
+    <div class="login-page-toolbar animate-up" style="animation-delay:.05s">
+      <select class="toolbar-select" data-lang-select id="lang-select-login">
+        <option value="pt">PT</option>
+        <option value="en">EN</option>
+      </select>
+      <button class="toggle-theme-btn" id="theme-toggle-login" title="Alternar tema" onclick="DH.ui.toggleTheme()" data-icon="sun"></button>
+    </div>
+
+    <!-- Accordion Card -->
+    <div class="login-card animate-up" style="animation-delay:.1s">
+
+      <!-- LOGIN TAB -->
+      <div class="tab-item">
+        <div class="tab-header" id="login-tab-header">
+          <div class="tab-header-left">
+            <span class="tab-header-icon" data-icon="lock"></span>
+            <div>
+              <div class="tab-header-title" data-i18n="login_tab">Entrar</div>
+              <div class="tab-header-subtitle" data-i18n="login_subtitle">Acesse sua conta</div>
+            </div>
+          </div>
+          <span class="tab-chevron">▾</span>
+        </div>
+        <div class="tab-body" id="login-tab-body">
+          <div class="tab-content">
+            <form id="login-form" novalidate>
+              <div class="form-group">
+                <label class="form-label" for="login-email" data-i18n="field_email">E-mail</label>
+                <input type="email" class="form-input" id="login-email"
+                  data-i18n-placeholder="field_email" placeholder="E-mail"
+                  autocomplete="email" required>
+                <span class="form-error hidden" id="login-email-error"></span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="login-password" data-i18n="field_password">Senha</label>
+                <div class="input-group">
+                  <input type="password" class="form-input" id="login-password"
+                    data-i18n-placeholder="field_password" placeholder="Senha"
+                    autocomplete="current-password" required>
+                  <button type="button" class="input-action" data-password-toggle="login-password" data-icon="eye"></button>
+                </div>
+                <span class="form-error hidden" id="login-password-error"></span>
+              </div>
+
+              <div class="login-controls">
+                <span id="forgot-link" class="forgot-link" data-i18n="forgot_password">Esqueci minha senha</span>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-lg w-full" id="btn-login" data-i18n="btn_login">
+                Entrar
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- REGISTER TAB -->
+      <div class="tab-item">
+        <div class="tab-header" id="register-tab-header">
+          <div class="tab-header-left">
+            <span class="tab-header-icon" data-icon="user-plus"></span>
+            <div>
+              <div class="tab-header-title" data-i18n="register_tab">Criar Conta</div>
+              <div class="tab-header-subtitle" data-i18n="register_subtitle">Novo por aqui? Cadastre-se</div>
+            </div>
+          </div>
+          <span class="tab-chevron">▾</span>
+        </div>
+        <div class="tab-body" id="register-tab-body">
+          <div class="tab-content">
+            <form id="register-form" novalidate>
+              <div class="form-group">
+                <label class="form-label" for="reg-name"><span data-i18n="field_name">Nome completo</span> <span class="req-mark">*</span></label>
+                <input type="text" class="form-input" id="reg-name"
+                  data-i18n-placeholder="field_name_placeholder" placeholder="Seu nome completo" autocomplete="name" required>
+                <span class="form-error hidden" id="reg-name-error"></span>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+                <div class="form-group">
+                  <label class="form-label" for="reg-phone"><span data-i18n="field_phone">Telefone</span> <span class="req-mark">*</span></label>
+                  <input type="tel" class="form-input" id="reg-phone" placeholder="(11) 99999-9999" autocomplete="tel" required>
+                  <span class="form-error hidden" id="reg-phone-error"></span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="reg-cpf"><span id="reg-cpf-label" data-i18n="field_cpf">CPF</span> <span class="req-mark">*</span></label>
+                  <input type="text" class="form-input" id="reg-cpf" placeholder="000.000.000-00" maxlength="18" required>
+                  <span class="form-error hidden" id="reg-cpf-error"></span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="reg-country"><span data-i18n="field_country">País</span> <span class="req-mark">*</span></label>
+                <select class="form-select" id="reg-country" required></select>
+                <span class="form-error hidden" id="reg-country-error"></span>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+                <div class="form-group" id="reg-state-wrap">
+                  <label class="form-label" for="reg-state"><span data-i18n="credor_state">Estado</span> <span class="req-mark">*</span></label>
+                  <select class="form-select" id="reg-state" required></select>
+                  <span class="form-error hidden" id="reg-state-error"></span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="reg-city"><span data-i18n="credor_city">Cidade</span> <span class="req-mark">*</span></label>
+                  <input type="text" class="form-input" id="reg-city" list="city-datalist" placeholder="Fortaleza" autocomplete="address-level2" required>
+                  <span class="form-error hidden" id="reg-city-error"></span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="reg-plan"><span data-i18n="field_plan">Plano</span> <span class="req-mark">*</span></label>
+                <select class="form-select" id="reg-plan" required>
+                  <option value="" data-i18n="select_plan_placeholder">Selecione um plano</option>
+                </select>
+                <span class="form-error hidden" id="reg-plan-error"></span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="reg-currency"><span data-i18n="field_currency">Moeda</span> <span class="req-mark">*</span></label>
+                <select class="form-select" id="reg-currency" required>
+                  <option value="BRL" data-i18n="opt_currency_brl">R$ Real</option>
+                  <option value="USD" data-i18n="opt_currency_usd">$ Dólar</option>
+                  <option value="EUR" data-i18n="opt_currency_eur">€ Euro</option>
+                </select>
+                <div class="form-hint" id="reg-plan-price-hint"></div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="reg-payment-method"><span data-i18n="field_payment_method">Forma de pagamento</span> <span class="req-mark">*</span></label>
+                <select class="form-select" id="reg-payment-method" required>
+                  <option value="" data-i18n="select_method_placeholder">Selecione a forma de pagamento</option>
+                  <option value="pix" data-i18n="method_pix">Pix</option>
+                  <option value="card" data-i18n="method_card">Cartão de crédito/débito</option>
+                  <option value="boleto" data-i18n="method_boleto">Boleto bancário</option>
+                  <option value="bonus" data-i18n="method_bonus">Bônus</option>
+                </select>
+                <span class="form-error hidden" id="reg-payment-method-error"></span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="reg-email"><span data-i18n="field_email">E-mail</span> <span class="req-mark">*</span></label>
+                <input type="email" class="form-input" id="reg-email"
+                  data-i18n-placeholder="field_email_placeholder" placeholder="seu@email.com" autocomplete="email" required>
+                <span class="form-error hidden" id="reg-email-error"></span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="reg-password"><span data-i18n="field_password">Senha</span> <span class="req-mark">*</span></label>
+                <div class="input-group">
+                  <input type="password" class="form-input" id="reg-password"
+                    data-i18n-placeholder="field_password_min_placeholder" placeholder="Mínimo 6 caracteres" autocomplete="new-password" required>
+                  <button type="button" class="input-action" data-password-toggle="reg-password" data-icon="eye"></button>
+                </div>
+                <div class="password-strength">
+                  <div class="password-strength-bar">
+                    <div class="password-strength-fill" id="reg-strength-bar"></div>
+                  </div>
+                  <div class="password-strength-text" id="reg-strength-text"></div>
+                </div>
+                <span class="form-error hidden" id="reg-password-error"></span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="reg-confirm-password"><span data-i18n="field_confirm_password">Confirmar senha</span> <span class="req-mark">*</span></label>
+                <div class="input-group">
+                  <input type="password" class="form-input" id="reg-confirm-password"
+                    data-i18n-placeholder="field_confirm_password_placeholder" placeholder="Repita a senha" autocomplete="new-password" required>
+                  <button type="button" class="input-action" data-password-toggle="reg-confirm-password" data-icon="eye"></button>
+                </div>
+                <span class="form-error hidden" id="reg-confirm-password-error"></span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="reg-security-code"><span data-i18n="field_security_code">Código de segurança</span> <span class="req-mark">*</span></label>
+                <input type="text" class="form-input" id="reg-security-code"
+                  placeholder="Ex: ABC123" maxlength="12" style="letter-spacing:.1em;font-weight:700;text-transform:uppercase;" required>
+                <span class="form-error hidden" id="reg-security-code-error"></span>
+                <div class="security-code-hint">
+                  <span data-icon="shield"></span>
+                  <span data-i18n="security_hint">Crie um código alfanumérico (ex: ABC123) para usar na recuperação de senha caso você esqueça. Guarde-o em local seguro.</span>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-lg w-full" id="btn-register" data-i18n="btn_register">
+                Criar conta
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /login-card -->
+
+    <!-- Footer -->
+    <div class="login-footer animate-up" style="animation-delay:.15s">
+      <div data-i18n="developed_by">Desenvolvido por</div>
+      <a href="https://onpublimarketing.com.br" target="_blank" rel="noopener">Onpubli Marketing</a>
+    </div>
+
+  </div><!-- /login-container -->
+</div><!-- /login-page -->
+
+<!-- ═══════════════════════════════════════
+     FORGOT PASSWORD MODAL
+═══════════════════════════════════════ -->
+<div class="modal-overlay modal-sm" id="forgot-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title"><span data-icon="key"></span> <span data-i18n="forgot_title">Recuperar senha</span></h2>
+      <button class="modal-close" id="forgot-close" data-icon="x"></button>
+    </div>
+    <div class="modal-body">
+      <p class="text-small text-muted" data-i18n="forgot_desc">
+        Informe seu e-mail e o código de segurança criado no cadastro para redefinir sua senha.
+      </p>
+      <form id="forgot-form" novalidate style="display:flex;flex-direction:column;gap:1rem;">
+        <div class="form-group">
+          <label class="form-label" data-i18n="field_email">E-mail</label>
+          <input type="email" class="form-input" id="forgot-email" data-i18n-placeholder="field_email_placeholder" placeholder="seu@email.com">
+          <span class="form-error hidden" id="forgot-email-error"></span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="field_security_code">Código de segurança</label>
+          <input type="text" class="form-input" id="forgot-security-code"
+            placeholder="Ex: ABC123" maxlength="12"
+            style="letter-spacing:.1em;font-weight:700;text-transform:uppercase;">
+          <span class="form-error hidden" id="forgot-security-code-error"></span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="field_new_password">Nova senha</label>
+          <div class="input-group">
+            <input type="password" class="form-input" id="forgot-new-password" data-i18n-placeholder="field_password_min_placeholder" placeholder="Mínimo 6 caracteres">
+            <button type="button" class="input-action" data-password-toggle="forgot-new-password" data-icon="eye"></button>
+          </div>
+          <div class="password-strength">
+            <div class="password-strength-bar">
+              <div class="password-strength-fill" id="forgot-strength-bar"></div>
+            </div>
+            <div class="password-strength-text" id="forgot-strength-text"></div>
+          </div>
+          <span class="form-error hidden" id="forgot-new-password-error"></span>
+        </div>
+        <button type="submit" class="btn btn-primary w-full" data-i18n="btn_reset">Redefinir senha</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="js/icons.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/data.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  // ── Bootstrap ──
+  (function() {
+    // Check if already logged in
+    const session = DH.data.session.get();
+    if (session) {
+      window.location.href = session.role === 'admin' ? 'admin.html' : 'dashboard.html';
+      return;
+    }
+
+    // Init settings
+    const s = DH.data.settings.get();
+    DH.state.theme    = s.theme;
+    DH.state.language = s.language;
+
+    // Apply theme
+    DH.ui.initTheme();
+
+    // Init i18n
+    DH.i18n.init();
+    DH.i18n.applyTranslations();
+    DH.icons.mount();
+
+    // Update brand tagline
+    document.getElementById('brand-tagline').textContent = DH.i18n.t('brand_tagline');
+
+    // Init selectors
+    DH.ui.initLanguageSelectors();
+
+    // Update lang select
+    document.querySelectorAll('[data-lang-select]').forEach(s2 => s2.value = s.language);
+
+    // Init auth
+    DH.auth.init();
+
+    // Handle hash for auto-tab (e.g., index.html#register)
+    if (window.location.hash === '#register') {
+      const loginHeader = document.getElementById('login-tab-header');
+      const loginBody   = document.getElementById('login-tab-body');
+      const regHeader   = document.getElementById('register-tab-header');
+      const regBody     = document.getElementById('register-tab-body');
+      if (loginHeader) { loginHeader.classList.remove('active'); loginBody.classList.remove('open'); }
+      if (regHeader)   { regHeader.classList.add('active');   regBody.classList.add('open'); }
+    }
+  })();
+</script>
+</body>
+</html>
